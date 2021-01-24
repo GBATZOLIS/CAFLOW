@@ -11,8 +11,11 @@ The main code for the CouplingLayer has been copied from a deep learning tutoria
 Tutorial: https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial11/NF_image_modeling.html
 """
 
+import torch
+import torch.nn as nn
+
 class AffineCouplingLayer(nn.Module):
-    def __init__(self, c_in, dim, network, mask_info):
+    def __init__(self, c_in, dim, mask_info, network):
         """
         Coupling layer inside a normalizing flow.
         Inputs:
@@ -26,7 +29,7 @@ class AffineCouplingLayer(nn.Module):
                                   'invert'. Value: Boolean. Whether to invert the mask. This can be used instead of permutation layers.
         """
 
-        super(AffineCouplingLayer).__init__()
+        super(AffineCouplingLayer, self).__init__()
         self.c_in = c_in
         self.dim = dim
         self.network = network
@@ -53,9 +56,12 @@ class AffineCouplingLayer(nn.Module):
                             torch.zeros(c_in-c_in//2, dtype=torch.float32)])
             infered_shape = tuple([1,c_in]+[1 for i in range(self.dim)])
             mask = mask.view(infered_shape)
+            
             if kwargs.get('invert')==True:
                 mask = 1 - mask
+                
             return mask
+        
         elif kwargs.get('mask_type') == 'checkerboard':
             shape = kwargs.get('shape')
             dims = []
@@ -66,14 +72,16 @@ class AffineCouplingLayer(nn.Module):
             mask = torch.fmod(mesh_dims_sum, 2)
             infered_shape = tuple([1,1]+[dim for dim in shape])
             mask = mask.to(torch.float32).view(infered_shape)
+            
             if kwargs.get('invert')==True:
                 mask = 1 - mask
+                
             return mask
         
         else:
             raise NotImplementedError('mask type has not been implemented')
 
-    def forward(self, z, ldj, reverse=False, cond_rv=None):
+    def forward(self, z, logdet, reverse=False, cond_rv=None):
         """
         Inputs:
             z - Latent input to the flow
@@ -84,6 +92,8 @@ class AffineCouplingLayer(nn.Module):
         """
 
         # Apply network to masked input
+        print(z.shape)
+        print(self.mask.shape)
         z_in = z * self.mask
         if cond_rv is None:
             nn_out = self.network(z_in)
@@ -107,9 +117,9 @@ class AffineCouplingLayer(nn.Module):
             # Whether we first shift and then scale, or the other way round,
             # is a design choice, and usually does not have a big impact
             z = (z + t) * torch.exp(s)
-            ldj += s.sum(dim=[i+1 for i in range(self.dim)]])
+            logdet += s.sum(dim=[i+1 for i in range(self.dim+1)]) #use self.dim+1 because we need to add over the channel dimension as well
         else:
             z = (z * torch.exp(-s)) - t
-            ldj -= s.sum(dim=[i+1 for i in range(self.dim)]])
+            logdet -= s.sum(dim=[i+1 for i in range(self.dim+1)])
 
-        return z, ldj
+        return z, logdet

@@ -13,7 +13,7 @@ import torch.nn as nn
 
 
 
-class Shared_Cond_flow(nn.Module):
+class SharedConditionalFlow(nn.Module):
     def __init__(self, shape, scales, opts):
         super(Shared_Cond_flow, self).__init__()
 
