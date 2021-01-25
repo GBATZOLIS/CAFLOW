@@ -6,7 +6,21 @@ Created on Sun Jan 24 18:18:51 2021
 @author: gbatz97
 """
 
-#This simple fully convolutional architecture has been used in SRFLOW
+""""
+This model has been copied from the deep learning tutorial on normalising flows in the University of Amsterdam
+Tutorial: https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial11/NF_image_modeling.html
+
+Their explanation for using this network is the following:
+    
+As a last aspect of coupling layers, we need to decide for the deep neural network we want to apply in the coupling layers. 
+The input to the layers is an image, and hence we stick with a CNN. 
+Because the input to a transformation depends on all transformations before, 
+it is crucial to ensure a good gradient flow through the CNN back to the input, 
+which can be optimally achieved by a ResNet-like architecture. 
+Specifically, we use a Gated ResNet that adds a sigma-gate to the skip connection, 
+similarly to the input gate in LSTMs. The details are not necessarily important here, 
+and the network is strongly inspired from Flow++ [3] in case you are interested in building even stronger models.
+"""
 
 import torch.nn.functional as F
 import torch.nn as nn

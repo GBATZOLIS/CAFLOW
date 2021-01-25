@@ -92,8 +92,6 @@ class AffineCouplingLayer(nn.Module):
         """
 
         # Apply network to masked input
-        print(z.shape)
-        print(self.mask.shape)
         z_in = z * self.mask
         if cond_rv is None:
             nn_out = self.network(z_in)

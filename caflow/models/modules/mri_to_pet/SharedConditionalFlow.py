@@ -14,63 +14,70 @@ import torch.nn as nn
 
 
 class SharedConditionalFlow(nn.Module):
-    def __init__(self, shape, scales, opts):
-        super(Shared_Cond_flow, self).__init__()
+    def __init__(self, channels, dim, scales, opts):
+        super(SharedConditionalFlow, self).__init__()
 
         self.g_I_cond_flows = nn.ModuleList()
         self.g_S_cond_flows = nn.ModuleList()
-
-        self.scales = scales
-        self.shapes = []
-        for scale in range(1,scales+1):
-            scale_shape = calculate_scale_shape(scale, original_shape)
-            self.shapes.append(scale_shape)
-            self.g_I_cond_flows.append(g_I_cond_flow(scale_shape))
-            if scale>1:
-                self.g_S_cond_flows.append(g_S_cond_flow(scale_shape))
         
-        self.device = opts.device['Cond_flow']
+        self.channels = channels #initial number of channels of the image (3 for rgb images)
+        self.dim = dim
+        self.scales = scales
+        
+        for scale in range(1, self.scales+1):
+            scale_channels = self.calculate_scale_channels(dim, scale)
+            print(scale_channels)
+            
+            self.g_I_cond_flows.append(g_I_cond_flow(scale_channels))
+            
+            if scale > 1:#There is no shared flow in the first level
+                self.g_S_cond_flows.append(g_S_cond_flow(scale_channels))
+        
+        #self.device = opts.device['Cond_flow'] #we will take care of that later
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
 
-
-    def logprob(z):
-        #if z is a list compute the log probability
-        #of the random vectors in the list and sum them up
-        pass
-
-    def calculate_scale_shape(scale, original_shape):
-        #use this method to calculate the input shape of the flow block
-        pass
-    
-    def forward(L, z, D, logdet=0., reverse=False, shortcut=False):
+    def calculate_scale_channels(self, dim, scale):
+        if scale < self.scales:
+            return 2**((dim-1)*scale)*self.channels
+        elif scale == self.scales: #last scale
+            return 2**((dim-1)*(scale-1))*2**dim*self.channels
+        
+    def forward(self, L=[], z=[], D=[], logdet=0., reverse=False, shortcut=False):
         if reverse:
             L_pred, logdet = self.decode(z, D, shortcut)
         else:
             logprob, logdet = self.encode(L, D, shortcut)
 
-    def encode(L, D, logdet, shortcut=False):
+    def encode(self, L, D, logdet, shortcut=False):
+        z=[]
         if not shortcut:
+            """checked"""
             logprob = 0.
             for i in range(self.scales):
+                z[i]=[]
+                
                 if i==self.scales-1:
-                    h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, 
-                                                        reverse=False, split=False)
-                    logprob += self.logprob(h_split)
+                    h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
+                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                    z[i].append(h_split)
                     continue
 
-                h_split, h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, 
-                                                            reverse=False, split=True)
-                logprob += self.logprob(h_split)
+                h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i],logdet,reverse=False)
+                h_split, h_pass = h_pass.chunk(2, dim=1)
+                logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                z[i].append(h_split)
 
                 for j in range(i, self.scales-1):
                     if j==self.scales-2:
-                        h_split, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], logdet, 
-                                                            reverse=False, split=False)
-                        logprob += self.logprob(h_split)
+                        h_split, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
+                        logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                        z[i].append(h_split)
                     
-                    h_split, h_pass, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], 
-                                                                logdet, reverse=False, split=True)
-                    logprob += self.logprob(h_split)
+                    h_pass, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], 
+                                                            logdet, reverse=False)
+                    h_split, h_pass = h_pass.chunk(2, dim=1)
+                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                    z[i].append(h_split)
 
             return logprob, logdet
         else:
@@ -115,7 +122,7 @@ class SharedConditionalFlow(nn.Module):
 
             return logprob, logdet
     
-    def decode(z, D, logdet, shortcut=False):
+    def decode(self, z, D, logdet, shortcut=False):
         D=D[::-1]
         g_S_cond_flows = self.g_S_cond_flows[::-1]
         g_I_cond_flows = self.g_I_cond_flows[::-1]
@@ -169,7 +176,7 @@ class SharedConditionalFlow(nn.Module):
                     h_pass, logdet = g_S_cond_flows[i](concat_pass, L[-1], D[i], logdet, reverse=True)
                     last_S_h_pass = h_pass
 
-                else i==self.scales-1:
+                elif i==self.scales-1:
                     concat_pass = torch.cat([z[0][i], last_S_h_pass], dim=1)
                     h_pass, logdet = g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
                     L.append(h_pass)

@@ -10,8 +10,10 @@ import torch.nn as nn
 import torch
 from caflow.models.modules.blocks.FlowBlock import FlowBlock                    
 
+from caflow.models.modules.networks.GatedConvNet import GatedConvNet
+
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth):
+    def __init__(self, channels, dim, scales, scale_depth, network):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -22,9 +24,11 @@ class UnconditionalFlow(nn.Module):
         
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
+            print(scale_channels)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
-                                               depth = scale_depth))
+                                               depth = scale_depth,
+                                               network = network))
 
         # Create prior distribution for final latent space
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
@@ -71,7 +75,6 @@ class UnconditionalFlow(nn.Module):
         #z is a list of the latent tensors of the different scales.
         #The tensors of different scales have been put in an ascending order
         #z = [h_split(1st scale)-size:D/2, ..., h_split(nth scale)-size:D/2^n]
-        print(len(z))
         
         h_pass=None
         for i in range(self.scales):
@@ -85,18 +88,28 @@ class UnconditionalFlow(nn.Module):
         return h_pass, logdet
 
 
+#instantiate the unconditional flow
+rflow = UnconditionalFlow(channels=1, dim=3, scales=4, scale_depth=3, network = GatedConvNet)
 
-rflow = UnconditionalFlow(channels=1, dim=3, scales=4, scale_depth=3)
-y = torch.randn((4,1,128,128,128), dtype=torch.float32)
+y = torch.randn((2, 1, 64, 64, 64), dtype=torch.float32)
+print('y shape: ', y.size())
+
+print('Encoding y with the forward pass...We get z_enc (same dimensionality)')
 z_enc, logprior, logdet = rflow(y=y)
 
-print(len(z_enc))
-for elem in z_enc:
-    print(elem.size())
+print('z_enc elements:')
+for i, elem in enumerate(z_enc):
+    print(i, elem.size())
+    
+print('logprior size: ', logprior.size())
+print('logdet size: ', logdet.size())
+
+print('Decoding y_dec from its z_enc enconding... We pass z_enc through the backward pass.')
 y_dec, logdet = rflow(z=z_enc, reverse=True)
+print('y_dec size:', y_dec.size())
 
 r = y-y_dec
-print(r.sum())
+print('sum(y-y_dec):',r.sum())
 
         
 
