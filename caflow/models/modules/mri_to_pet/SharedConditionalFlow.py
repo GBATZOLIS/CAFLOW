@@ -8,45 +8,61 @@ Created on Tue Jan 19 22:02:53 2021
 
 
 
-from caflow.models.modules.blocks import *
+from caflow.models.modules.blocks.ConditionalFlowBlock import g_S, g_I
 import torch.nn as nn
 import torch
 
 
 class SharedConditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, opts):
+    def __init__(self, dim, scales, scale_depth, network):
         super(SharedConditionalFlow, self).__init__()
 
         self.g_I_cond_flows = nn.ModuleList()
         self.g_S_cond_flows = nn.ModuleList()
         
-        self.channels = channels #initial number of channels of the image (3 for rgb images)
+        self.channels = 2**(dim-1) #initial number of channels
         self.dim = dim
         self.scales = scales
         
-        for scale in range(1, self.scales+1):
-            scale_channels = self.calculate_scale_channels(dim, scale)
-            print(scale_channels)
+
+        for scale in range(self.scales):
+            g_I_channels = self.calculate_scale_channels(dim, scale, flow_type='g_I')
+            print('g_I_channels: ', g_I_channels)
+            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=scale_depth, network=network))
             
-            self.g_I_cond_flows.append(g_I_cond_flow(scale_channels))
-            
-            if scale > 1:#There is no shared flow in the first level
-                self.g_S_cond_flows.append(g_S_cond_flow(scale_channels))
+            if scale > 0:#There is no shared flow in the first level
+                g_S_channels = self.calculate_scale_channels(dim, scale, flow_type='g_S')
+                print('g_S_channels: ', g_S_channels)
+                
+                if scale < self.scales - 1: #last scale signaller
+                    last_scale=False
+                else:
+                    last_scale=True
+                    
+                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, network=network, last_scale=last_scale))
+        
+        print(len(self.g_I_cond_flows))
+        print(len(self.g_S_cond_flows))
         
         #self.device = opts.device['Cond_flow'] #we will take care of that later
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
 
-    def calculate_scale_channels(self, dim, scale):
-        if scale < self.scales:
+    def calculate_scale_channels(self, dim, scale, flow_type='g_I'):
+        if scale < self.scales-1:
             return 2**((dim-1)*scale)*self.channels
-        elif scale == self.scales: #last scale
-            return 2**((dim-1)*(scale-1))*2**dim*self.channels
+        elif scale == self.scales-1: #last scale
+            if flow_type=='g_I':
+                return 2**((dim-1)*(scale-1))*2**dim*self.channels
+            elif flow_type=='g_S':
+                return 2**((dim-1)*scale)*self.channels
         
     def forward(self, L=[], z=[], D=[], logdet=0., reverse=False, shortcut=False):
         if reverse:
-            L_pred, logdet = self.decode(z, D, shortcut)
+            L_pred, logdet = self.decode(z=z, D=D, logdet=logdet, shortcut=shortcut)
+            return L_pred, logdet
         else:
-            z_enc, logprob, logdet = self.encode(L, D, shortcut)
+            z_enc, logprob, logdet = self.encode(L=L, D=D, logdet=logdet, shortcut=shortcut)
+            return z_enc, logprob, logdet
 
     def encode(self, L, D, logdet, shortcut=False):
         
@@ -55,30 +71,38 @@ class SharedConditionalFlow(nn.Module):
             logprob = 0.
             z=[]
             for i in range(self.scales):
-                z[i]=[]
+                z_horizontal=[]
                 
                 if i==self.scales-1:
                     h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
                     logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                    z[i].append(h_split)
-                    continue
-
-                h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i],logdet,reverse=False)
-                h_split, h_pass = h_pass.chunk(2, dim=1)
-                logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                z[i].append(h_split)
-
-                for j in range(i, self.scales-1):
-                    if j==self.scales-2:
-                        h_split, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
-                        logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                        z[i].append(h_split)
-                    
-                    h_pass, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], 
-                                                            logdet, reverse=False)
+                    z_horizontal.append(h_split)
+                else:
+                    h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
                     h_split, h_pass = h_pass.chunk(2, dim=1)
                     logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                    z[i].append(h_split)
+                    z_horizontal.append(h_split)
+    
+                    for j in range(i, self.scales-1):
+                        if j==self.scales-2:
+                            h_split, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
+                            logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                            z_horizontal.append(h_split)
+                        else:
+                            h_pass, logdet = self.g_S_cond_flows[j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
+                            h_split, h_pass = h_pass.chunk(2, dim=1)
+                            logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                            z_horizontal.append(h_split)
+                
+                z.append(z_horizontal)
+            
+            for i, flow_latents in enumerate(z):
+                print('----Flow %d latents----' % i)
+                for flow_latent in flow_latents:
+                    print(flow_latent.size())
+                    
+            print(logprob.size())
+            print(logdet.size())
 
             return z, logprob, logdet
         else:
@@ -98,14 +122,14 @@ class SharedConditionalFlow(nn.Module):
                 if i == self.scales-1:
                     #last g_I activation is not split.
                     h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
-                    logprob += self.logprob(h_split)
+                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                     z_I.append(h_split)
                     continue
                 
                 
                 h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
                 h_split, h_pass = h_pass.chunk(2, dim=1)
-                logprob += self.logprob(h_split)
+                logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                 z_I.append(h_split)
                 # we need to store h_pass because it will be concatenated with the rest of the activations of the same level,
                 # so that they can be concatenated and passed through the next g_S network altogether.
@@ -116,7 +140,7 @@ class SharedConditionalFlow(nn.Module):
                     h_pass, logdet = self.g_S_cond_flows[i](previous_scale_I_activation, 
                                                             L[i+1], D[i+1], logdet, reverse=False)
                     h_split, h_pass = h_pass.chunk(2, dim=1)
-                    logprob += self.logprob(h_split)
+                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                     z_S.append(h_split)
                     previous_scale_S_activations = h_pass
                     continue
@@ -129,14 +153,14 @@ class SharedConditionalFlow(nn.Module):
                     #last g_S activation is not split.
                     h_split, logdet = self.g_S_cond_flows[i](concat_scale_activations, 
                                                              L[i+1], D[i+1], logdet, reverse=False)
-                    logprob += self.logprob(h_split)
+                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                     z_S.append(h_split)
                     continue
 
                 h_pass, logdet = self.g_S_cond_flows[i](concat_scale_activations, 
                                                         L[i+1], D[i+1], logdet, reverse=False)
                 h_split, h_pass = h_pass.chunk(2, dim=1)
-                logprob += self.logprob(h_split)
+                logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                 z_S.append(h_split)
                 previous_scale_S_activations = h_pass
 
@@ -179,7 +203,7 @@ class SharedConditionalFlow(nn.Module):
                     L.append(h_pass)
 
             #L=[L_0, L_1,...,L_{n-1}]
-            L.inverse() #we need to invert L because the subsequent unconditinal flow exptects the inverted order
+            L=L[::-1] #we need to invert L because the subsequent unconditinal flow exptects the inverted order
             return L, logdet
         
         elif shortcut and not xtreme_shortcut:
@@ -189,7 +213,7 @@ class SharedConditionalFlow(nn.Module):
             z_S=z[1] #[z_(n-2)^(n-1),      z_(n-3)^(n-1)||z_(n-3)^(n-2),       z_(n-4)^(n-1)||z_(n-4)^(n-2)||z_(n-4)^(n-3), 
                      # ...,              z_1^(n-1)||z_1^(n-2)|| ... ||z_1^2,       z_0^(n-1)||z_0^(n-2)|| ... ||z_0^1     ]
             
-            n=self.scales:
+            n=self.scales
             for i in range(n):
                 if i==0:
                     h_pass, logdet = self.g_I_cond_flows[-1](z_I[-1], D[-1], logdet, reverse=True)
@@ -216,11 +240,13 @@ class SharedConditionalFlow(nn.Module):
                     L.append(h_pass) #L_(n-1)
             
             # L=[L_0, L_1,...,L_(n-1)]
-            L.inverse() 
+            L=L[::-1]
             # L=[L_(n-1), ..., L_1, L_0]
             return L, logdet
         
         elif shortcut and xtreme_shortcut:
+            """yet to be done"""
+            """
             z=[z[0][::-1], z[1][::-1]]
             #z is a list of two lists of latent tensors
             #the first list contains the I latent tensors and the second contains the S latent tensors
@@ -248,7 +274,9 @@ class SharedConditionalFlow(nn.Module):
                     h_pass, logdet = g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
                     L.append(h_pass)
 
-            L.inverse()
+            L=L[::-1]
             return L, logdet
+            """
+            pass
 
 

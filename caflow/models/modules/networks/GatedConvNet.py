@@ -125,7 +125,8 @@ class GatedConvNet(nn.Module):
                    conv(2*c_hidden, c_out, kernel_size=3, padding=1)]
         
         self.nn = nn.Sequential(*layers)
-
+        
+        #start the coupling layer as identity -> t=0, exp(s)=1
         self.nn[-1].weight.data.zero_()
         self.nn[-1].bias.data.zero_()
 

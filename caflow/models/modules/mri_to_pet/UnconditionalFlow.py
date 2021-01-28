@@ -24,7 +24,7 @@ class UnconditionalFlow(nn.Module):
         
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
-            print(scale_channels)
+            #print(scale_channels)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
                                                depth = scale_depth,
@@ -88,6 +88,7 @@ class UnconditionalFlow(nn.Module):
         return h_pass, logdet
 
 
+"""
 #instantiate the unconditional flow
 rflow = UnconditionalFlow(channels=1, dim=3, scales=4, scale_depth=3, network = GatedConvNet)
 
@@ -108,8 +109,9 @@ print('Decoding y_dec from its z_enc enconding... We pass z_enc through the back
 y_dec, logdet = rflow(z=z_enc, reverse=True)
 print('y_dec size:', y_dec.size())
 
-r = y-y_dec
-print('sum(y-y_dec):',r.sum())
-
+r = torch.abs(y-y_dec)
+print('sum(|y-y_dec|)',torch.sum(r))
+print('mean(|y-y_dec|):',torch.mean(r))
+"""
         
 
