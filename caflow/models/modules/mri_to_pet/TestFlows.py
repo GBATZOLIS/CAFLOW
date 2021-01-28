@@ -24,10 +24,10 @@ rflow = UnconditionalFlow(channels=1, dim=2, scales=5, scale_depth=2, network = 
 tflow = UnconditionalFlow(channels=1, dim=2, scales=5, scale_depth=2, network = GatedConvNet)
 
 
-Y = torch.randn((1, 1, 512, 512), dtype=torch.float32)
+Y = torch.randn((3, 1, 512, 512), dtype=torch.float32)
 print('y shape: ', Y.size())
 
-I = torch.randn((1, 1, 512, 512), dtype=torch.float32)
+I = torch.randn((3, 1, 512, 512), dtype=torch.float32)
 
 print('Encoding Y and I with the forward pass...We get D and L.')
 with torch.no_grad():
@@ -44,14 +44,17 @@ condflow = SharedConditionalFlow(dim=2, scales=5, scale_depth=2, network=CondGat
 #Use D, L to get the conditional enconding of L without the shortcut.
 with torch.no_grad():
     z_no_short, logprob, logdet = condflow(L=L, z=[], D=D, reverse=False, shortcut=True)
-    print(z_no_short)
+    print('z_no_short: ', z_no_short)
+    print('logprob.size() :', logprob.size())
+    print('logdet.size() :', logdet.size())
     L_pred, logdet = condflow(L=[], z=z_no_short, D=D, reverse=True, shortcut=True)
+
 
 for L_i, L_i_inv in zip(L, L_pred):
     r = torch.abs(L_i-L_i_inv)
     print('torch.sum(residual): ', torch.sum(r))
     print('torch.mean(residual): ', torch.mean(r))
-    
+ 
     
 
 

@@ -92,6 +92,7 @@ class CondGatedConvNet(nn.Module):
         for i, rv in enumerate(cond_rv):
             interpolated_cond_rvs.append(self.interpolate_layers[i](rv))
             print(interpolated_cond_rvs[i].size())
+        
         if z is not None:
             print(z.size())
         

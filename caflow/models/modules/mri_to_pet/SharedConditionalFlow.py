@@ -101,17 +101,23 @@ class SharedConditionalFlow(nn.Module):
                 for flow_latent in flow_latents:
                     print(flow_latent.size())
                     
-            print(logprob.size())
-            print(logdet.size())
+            #print(logprob.size())
+            #print(logdet.size())
 
             return z, logprob, logdet
         else:
             """done"""
             logprob = 0.
+            batch_size = L[0].size(0)
+            batch_logdet = 0.
             previous_scale_I_activation = None
+            previous_scale_I_logdet = None
             previous_scale_S_activations = None
+            previous_scale_S_logdets = None
+            
             z_I = []
             z_S = []
+            
             for i in range(self.scales):
                 # calculate all the activations at the i^th level. Calculations flow from right to left in scale-wise manner
                 # 1.) We calculate the activation of g_I_i at this scale/level(i).
@@ -121,51 +127,71 @@ class SharedConditionalFlow(nn.Module):
                 #1.) calculate g_I_i activation
                 if i == self.scales-1:
                     #last g_I activation is not split.
-                    h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
+                    h_split, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet=0., reverse=False)
                     logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                    batch_logdet+=logdet
                     z_I.append(h_split)
                     continue
                 
                 
-                h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet, reverse=False)
+                h_pass, logdet = self.g_I_cond_flows[i](L[i], D[i], logdet=0., reverse=False)
                 h_split, h_pass = h_pass.chunk(2, dim=1)
                 logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                 z_I.append(h_split)
                 # we need to store h_pass because it will be concatenated with the rest of the activations of the same level,
                 # so that they can be concatenated and passed through the next g_S network altogether.
                 previous_scale_I_activation = h_pass 
+                previous_scale_I_logdet = logdet
                 
                 #no concatenation is needed in the first g_S flow.
                 if previous_scale_S_activations==None:
                     h_pass, logdet = self.g_S_cond_flows[i](previous_scale_I_activation, 
-                                                            L[i+1], D[i+1], logdet, reverse=False)
+                                                            L[i+1], D[i+1], logdet=previous_scale_I_logdet, reverse=False)
                     h_split, h_pass = h_pass.chunk(2, dim=1)
                     logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                     z_S.append(h_split)
                     previous_scale_S_activations = h_pass
+                    previous_scale_S_logdets = logdet
                     continue
                 
-                #concatenate all the activations coming from the previous level/scale
+                #concatenate all the activations and logdets coming from the previous level/scale
                 concat_scale_activations = torch.cat([previous_scale_S_activations, 
                                                       previous_scale_I_activation], dim=0)
+                
+                concat_scale_logdets = torch.cat([previous_scale_S_logdets,
+                                                  previous_scale_I_logdet], dim=0)
+                
                 
                 if i == self.scales-2:
                     #last g_S activation is not split.
                     h_split, logdet = self.g_S_cond_flows[i](concat_scale_activations, 
-                                                             L[i+1], D[i+1], logdet, reverse=False)
-                    logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                                                             L[i+1], D[i+1], logdet=concat_scale_logdets, reverse=False)
+                    
+                    logprob_concat = self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                    for i in range(logprob_concat.size(0)//batch_size):
+                        logprob += logprob_concat[i*batch_size:(i+1)*batch_size]
+                        batch_logdet += logdet[i*batch_size:(i+1)*batch_size]
+                    
+                    
+                        
                     z_S.append(h_split)
                     continue
 
                 h_pass, logdet = self.g_S_cond_flows[i](concat_scale_activations, 
-                                                        L[i+1], D[i+1], logdet, reverse=False)
+                                                        L[i+1], D[i+1], logdet=concat_scale_logdets, reverse=False)
                 h_split, h_pass = h_pass.chunk(2, dim=1)
-                logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                
+                logprob_concat = self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
+                for i in range(logprob_concat.size(0)//batch_size):
+                    logprob += logprob_concat[i*batch_size:(i+1)*batch_size]
+                    
                 z_S.append(h_split)
                 previous_scale_S_activations = h_pass
+                previous_scale_S_logdets = logdet
 
             z_enc = [z_I, z_S]
-            return z_enc, logprob, logdet
+            
+            return z_enc, logprob, batch_logdet
     
     def decode(self, z, D, logdet, shortcut=False, xtreme_shortcut=False):
         #D = [D_{n-1}, D_{n-2}, ..., D_2, D_1, D_0]
@@ -213,30 +239,39 @@ class SharedConditionalFlow(nn.Module):
             z_S=z[1] #[z_(n-2)^(n-1),      z_(n-3)^(n-1)||z_(n-3)^(n-2),       z_(n-4)^(n-1)||z_(n-4)^(n-2)||z_(n-4)^(n-3), 
                      # ...,              z_1^(n-1)||z_1^(n-2)|| ... ||z_1^2,       z_0^(n-1)||z_0^(n-2)|| ... ||z_0^1     ]
             
+            logdet=0.
             n=self.scales
             for i in range(n):
                 if i==0:
-                    h_pass, logdet = self.g_I_cond_flows[-1](z_I[-1], D[-1], logdet, reverse=True)
+                    h_pass, logdet_I = self.g_I_cond_flows[-1](z_I[-1], D[-1], logdet=0., reverse=True)
+                    logdet += logdet_I
                     L.append(h_pass) #L_0
-                    h_pass, logdet = self.g_S_cond_flows[-1](z_S[-1], L[0], D[-1], logdet, reverse=True)
+                    h_pass, logdet_S = self.g_S_cond_flows[-1](z_S[-1], L[0], D[-1], logdet=0., reverse=True)
                     continue
                 
                 elif i <= n-2:
                     batch_size = h_pass.shape[0]//(n-i)
+                    
                     h_pass_I = h_pass[(n-i-1)*batch_size:]
+                    logdet_I = logdet_S[(n-i-1)*batch_size:]
+                    
                     h_pass_S = h_pass[:(n-i-1)*batch_size]
+                    logdet_S = logdet_S[:(n-i-1)*batch_size]
 
                     concat_pass_I = torch.cat([z_I[-1-i], h_pass_I], dim=1)
-                    h_pass, logdet = self.g_I_cond_flows[-1-i](concat_pass_I, D[-1-i], logdet, reverse=True)
+                    h_pass, logdet_I = self.g_I_cond_flows[-1-i](concat_pass_I, D[-1-i], logdet_I, reverse=True)
+                    logdet += logdet_I
                     L.append(h_pass) #L_i
 
                     concat_pass_S = torch.cat([z_S[-1-i], h_pass_S], dim=1)
-                    h_pass, logdet = self.g_S_cond_flows[-1-i](concat_pass_S, L[i], D[-1-i], logdet, reverse=True)
+                    h_pass, logdet_S = self.g_S_cond_flows[-1-i](concat_pass_S, L[i], D[-1-i], logdet_S, reverse=True)
                 
                 elif i == n-1:
                     h_pass_I = h_pass
+                    logdet_I = logdet_S
                     concat_pass_I = torch.cat([z_I[-1-i], h_pass_I], dim=1)
-                    h_pass, logdet = self.g_I_cond_flows[-1-i](concat_pass_I, D[-1-i], logdet, reverse=True)
+                    h_pass, logdet_I = self.g_I_cond_flows[-1-i](concat_pass_I, D[-1-i], logdet_I, reverse=True)
+                    logdet += logdet_I
                     L.append(h_pass) #L_(n-1)
             
             # L=[L_0, L_1,...,L_(n-1)]

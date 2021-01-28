@@ -116,8 +116,8 @@ class AffineCouplingLayer(nn.Module):
             # Whether we first shift and then scale, or the other way round,
             # is a design choice, and usually does not have a big impact
             z = (z + t) * torch.exp(s)
-            print('logdet.shape: ', logdet)
-            print('s.shape: ', s.shape)
+            #print('logdet.shape: ', logdet)
+            #print('s.shape: ', s.shape)
             logdet += s.sum(dim=[i+1 for i in range(self.dim+1)]) #use self.dim+1 because we need to add over the channel dimension as well
         else:
             z = (z * torch.exp(-s)) - t

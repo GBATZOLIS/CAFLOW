@@ -56,6 +56,22 @@ class AffineInjector(nn.Module):
         infer_shape = tuple([1,-1]+[1 for i in range(self.dim)])
         s_fac = self.scaling_factor.exp().view(infer_shape)
         s = torch.tanh(s / s_fac) * s_fac
+        
+        # The following code snippet is used only in the shortcut approach.
+        # Check if nn_out has higher dimension 0 than s and t. 
+        # If so, check if nn_out.shape[0] is a multiple of s.shape[0]
+        # The factor by which nn_out.shape[0] is greater than s.shape[0] 
+        # is the number of times s and t should be copied and concatenated in the first dimension
+        # This is used in the shortcut approaches where we do not recompute activations, by computing them only once.
+        if z.shape[0] > s.shape[0]:
+            print(z.shape[0], s.shape[0])
+            assert z.shape[0] % s.shape[0] == 0, 'z.shape[0] is not a multiple of s.shape[0].'
+            
+            num_copies = z.shape[0]//s.shape[0]
+            repeat_tuple = tuple([num_copies]+[1 for i in range(len(s.shape)-1)])
+            s = s.repeat(repeat_tuple)
+            t = t.repeat(repeat_tuple)
+            
 
         # Affine transformation
         if not reverse:
