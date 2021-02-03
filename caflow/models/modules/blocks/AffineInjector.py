@@ -64,7 +64,7 @@ class AffineInjector(nn.Module):
         # is the number of times s and t should be copied and concatenated in the first dimension
         # This is used in the shortcut approaches where we do not recompute activations, by computing them only once.
         if z.shape[0] > s.shape[0]:
-            print(z.shape[0], s.shape[0])
+            #print(z.shape[0], s.shape[0])
             assert z.shape[0] % s.shape[0] == 0, 'z.shape[0] is not a multiple of s.shape[0].'
             
             num_copies = z.shape[0]//s.shape[0]

@@ -39,7 +39,7 @@ from caflow.models.modules.networks.GatedConvNet import ConcatELU, LayerNormChan
 
 class CondGatedConvNet(nn.Module):
 
-    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=3, layer_type='coupling', num_cond_rvs=2 , last_scale=False):
+    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=2, layer_type='coupling', num_cond_rvs=2 , last_scale=False):
         """
         Module that summarizes the previous blocks to a full convolutional neural network.
         Inputs:
@@ -91,11 +91,6 @@ class CondGatedConvNet(nn.Module):
         interpolated_cond_rvs = []
         for i, rv in enumerate(cond_rv):
             interpolated_cond_rvs.append(self.interpolate_layers[i](rv))
-            print(interpolated_cond_rvs[i].size())
-        
-        if z is not None:
-            print(z.size())
-        
         
         if self.layer_type == 'injector':
             concat_pass = torch.cat(interpolated_cond_rvs, dim=1)
@@ -105,13 +100,27 @@ class CondGatedConvNet(nn.Module):
             batch_size = interpolated_cond_rvs[0].shape[0]
             gain_factor = z.shape[0] // batch_size
             
-            outputs = []
-            for i in range(gain_factor):
-                concat_pass = torch.cat([z[i*batch_size:(i+1)*batch_size]]+interpolated_cond_rvs, dim=1)
+            try:
+                #if GPU memory is not an issue we can this code snippet.
+                interpolated_cond_rvs = torch.cat(interpolated_cond_rvs, dim=1)
+                repeat_tuple = tuple([gain_factor]+[1 for i in range(len(interpolated_cond_rvs.shape)-1)])
+                interpolated_cond_rvs = interpolated_cond_rvs.repeat(repeat_tuple)
+                concat_pass = torch.cat([z, interpolated_cond_rvs], dim=1)
                 output = self.nn(concat_pass)
-                outputs.append(output)
             
-            output = torch.cat(outputs, dim = 0)
+            except RuntimeError as err:
+                print(err)
+                
+                #if memory is an issue we will use this code snippet
+                
+                outputs = []
+                for i in range(gain_factor):
+                    concat_pass = torch.cat([z[i*batch_size:(i+1)*batch_size]]+interpolated_cond_rvs, dim=1)
+                    output = self.nn(concat_pass)
+                    outputs.append(output)
+                output = torch.cat(outputs, dim = 0)
+
+            return output
             
         else:
             raise NotImplementedError('This type of layer is not supported yet. Options: [coupling, injector]')

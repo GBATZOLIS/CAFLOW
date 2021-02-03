@@ -15,10 +15,10 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
 from caflow.models.modules.blocks.AffineInjector import AffineInjector
 
-
+from caflow.models.modules.networks.CondGatedConvNet import CondGatedConvNet
 
 class g_S(nn.Module):
-    def __init__(self, channels, dim, depth, network, last_scale):
+    def __init__(self, channels, dim, depth, last_scale):
         super(g_S, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
@@ -47,15 +47,15 @@ class g_S(nn.Module):
             
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-                                              network = network(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 4*transformed_channels, c_out=-1, num_layers=2,
+                                              network = CondGatedConvNet(c_in = transformed_channels, dim=dim,
+                                                                c_hidden = 4*transformed_channels, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
                                                    mask_info={'mask_type':'channel', 'invert':False},
-                                                   network = network(c_in = transformed_channels, dim=dim,
-                                                                     c_hidden = 6*transformed_channels, c_out=-1, num_layers=2,
+                                                   network = CondGatedConvNet(c_in = transformed_channels, dim=dim,
+                                                                     c_hidden = 6*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=2, last_scale=last_scale)))
             
     
@@ -91,7 +91,7 @@ class g_S(nn.Module):
 
 
 class g_I(nn.Module):
-    def __init__(self, channels, dim, depth, network):
+    def __init__(self, channels, dim, depth):
         super(g_I, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
@@ -122,15 +122,15 @@ class g_I(nn.Module):
 
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-                                              network = network(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=2,
+                                              network = CondGatedConvNet(c_in = transformed_channels, dim=dim,
+                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=1)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
                                                    mask_info={'mask_type':'channel', 'invert':False},
-                                                   network = network(c_in = transformed_channels, dim=dim,
-                                                                     c_hidden = 4*transformed_channels, c_out=-1, num_layers=2,
+                                                   network = CondGatedConvNet(c_in = transformed_channels, dim=dim,
+                                                                     c_hidden = 4*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=1)))
             
     

@@ -14,35 +14,35 @@ import torch
 
 
 class SharedConditionalFlow(nn.Module):
-    def __init__(self, dim, scales, scale_depth, network):
+    def __init__(self, channels, dim, scales, scale_depth):
         super(SharedConditionalFlow, self).__init__()
 
         self.g_I_cond_flows = nn.ModuleList()
         self.g_S_cond_flows = nn.ModuleList()
         
-        self.channels = 2**(dim-1) #initial number of channels
+        self.channels = 2**(dim-1)*channels #initial number of channels
         self.dim = dim
         self.scales = scales
         
 
         for scale in range(self.scales):
             g_I_channels = self.calculate_scale_channels(dim, scale, flow_type='g_I')
-            print('g_I_channels: ', g_I_channels)
-            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=scale_depth, network=network))
+            #print('g_I_channels: ', g_I_channels)
+            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=scale_depth))
             
             if scale > 0:#There is no shared flow in the first level
                 g_S_channels = self.calculate_scale_channels(dim, scale, flow_type='g_S')
-                print('g_S_channels: ', g_S_channels)
+                #print('g_S_channels: ', g_S_channels)
                 
                 if scale < self.scales - 1: #last scale signaller
                     last_scale=False
                 else:
                     last_scale=True
                     
-                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, network=network, last_scale=last_scale))
+                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, last_scale=last_scale))
         
-        print(len(self.g_I_cond_flows))
-        print(len(self.g_S_cond_flows))
+        #print(len(self.g_I_cond_flows))
+        #print(len(self.g_S_cond_flows))
         
         #self.device = opts.device['Cond_flow'] #we will take care of that later
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
@@ -95,14 +95,6 @@ class SharedConditionalFlow(nn.Module):
                             z_horizontal.append(h_split)
                 
                 z.append(z_horizontal)
-            
-            for i, flow_latents in enumerate(z):
-                print('----Flow %d latents----' % i)
-                for flow_latent in flow_latents:
-                    print(flow_latent.size())
-                    
-            #print(logprob.size())
-            #print(logdet.size())
 
             return z, logprob, logdet
         else:
@@ -280,8 +272,8 @@ class SharedConditionalFlow(nn.Module):
             return L, logdet
         
         elif shortcut and xtreme_shortcut:
-            """yet to be done"""
-            """
+            """yet to be checked"""
+            
             z=[z[0][::-1], z[1][::-1]]
             #z is a list of two lists of latent tensors
             #the first list contains the I latent tensors and the second contains the S latent tensors
@@ -290,28 +282,26 @@ class SharedConditionalFlow(nn.Module):
             last_S_h_pass = None
             for i in range(self.scales):
                 if i==0:
-                    h_pass, logdet = g_I_cond_flows[i](z[0][i], D[i], logdet, reverse=True)
+                    h_pass, logdet = self.g_I_cond_flows[i](z[0][i], D[i], logdet, reverse=True)
                     L.append(h_pass)
-                    h_pass, logdet = g_S_cond_flows[i](z[1][i], L[-1], D[i], logdet, reverse=True)
+                    h_pass, logdet = self.g_S_cond_flows[i](z[1][i], L[-1], D[i], logdet, reverse=True)
                     last_S_h_pass = h_pass
 
                 elif i<self.scales-1:
                     concat_pass = torch.cat([z[0][i], last_S_h_pass], dim=1)
-                    h_pass, logdet = g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
+                    h_pass, logdet = self.g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
                     L.append(h_pass)
 
                     concat_pass = torch.cat([z[1][i], last_S_h_pass], dim=1)
-                    h_pass, logdet = g_S_cond_flows[i](concat_pass, L[-1], D[i], logdet, reverse=True)
+                    h_pass, logdet = self.g_S_cond_flows[i](concat_pass, L[-1], D[i], logdet, reverse=True)
                     last_S_h_pass = h_pass
 
                 elif i==self.scales-1:
                     concat_pass = torch.cat([z[0][i], last_S_h_pass], dim=1)
-                    h_pass, logdet = g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
+                    h_pass, logdet = self.g_I_cond_flows[i](concat_pass, D[i], logdet, reverse=True)
                     L.append(h_pass)
 
             L=L[::-1]
             return L, logdet
-            """
-            pass
 
 

@@ -10,12 +10,12 @@ import torch.nn as nn
 from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D, \
                           InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
-
+from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 
 
 
 class FlowBlock(nn.Module):
-    def __init__(self, channels, dim, depth, network):
+    def __init__(self, channels, dim, depth):
         super(FlowBlock, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
@@ -46,9 +46,9 @@ class FlowBlock(nn.Module):
 
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
                                                    dim=dim, mask_info={'mask_type':'channel', 'invert':False},
-                                                   network=network(c_in=transformed_channels, dim=dim, 
+                                                   network=GatedConvNet(c_in=transformed_channels, dim=dim, 
                                                                    c_hidden=2*transformed_channels, 
-                                                                   c_out=-1, num_layers=2)))
+                                                                   c_out=-1, num_layers=1)))
     
     def forward(self, h, logdet, reverse=False):
         if reverse:

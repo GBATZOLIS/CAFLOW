@@ -13,7 +13,7 @@ from caflow.models.modules.blocks.FlowBlock import FlowBlock
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth, network):
+    def __init__(self, channels, dim, scales, scale_depth):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -27,8 +27,7 @@ class UnconditionalFlow(nn.Module):
             #print(scale_channels)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
-                                               depth = scale_depth,
-                                               network = network))
+                                               depth = scale_depth))
 
         # Create prior distribution for final latent space
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
