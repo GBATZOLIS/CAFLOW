@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb  3 13:48:40 2021
+Created on Thu Feb  4 17:52:07 2021
 
 @author: gbatz97
 """
 
+
+
+from caflow.models.CAFlow import CAFlow
 
 from argparse import ArgumentParser
 from torch.utils.data.dataloader import default_collate as torch_collate
@@ -16,19 +19,16 @@ from caflow.utils.TensorboardImageSampler import TensorboardConditionalImageSamp
 from pytorch_lightning import Trainer
 
 def main(hparams):
-    train_dataset = AlignedDataset(hparams, phase='train')
-    train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
-                                  num_workers=hparams.train_workers, 
-                                  collate_fn=torch_collate)
+    test_dataset = AlignedDataset(hparams, phase='val')
+    test_dataloader = DataLoader(test_dataset, batch_size=hparams.val_batch,
+                                 num_workers=hparams.val_workers, 
+                                 collate_fn=torch_collate)
     
-    val_dataset = AlignedDataset(hparams, phase='val')
-    val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
-                                num_workers=hparams.val_workers, 
-                                collate_fn=torch_collate)
+    model = CAFlow.load_from_checkpoint(checkpoint_path='lightning_logs/version_7/checkpoints/epoch=16-step=2157.ckpt',
+                               opts=hparams)
     
-    model = CAFlow(hparams)
     trainer = Trainer(gpus=hparams.gpus)
-    trainer.fit(model, train_dataloader, val_dataloader)
+    trainer.test(model, test_dataloaders=test_dataloader)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', default=None)
     parser.add_argument('--lr', type=float, default=1e-3, help='initial learning rate')
     
+    #----------
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
     parser.add_argument('--data-channels', type=int, default=3)
@@ -52,6 +53,7 @@ if __name__ == '__main__':
                                                                         By default, min and max are computed from the tensor.')
     parser.add_argument('--sample_scale_each', type=bool, default=False, help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample_pad_value', type=int, default=0)
+    #----------
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')

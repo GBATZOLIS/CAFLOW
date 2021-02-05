@@ -10,8 +10,6 @@ import torch.nn as nn
 import torch
 from caflow.models.modules.blocks.FlowBlock import FlowBlock                    
 
-from caflow.models.modules.networks.GatedConvNet import GatedConvNet
-
 class UnconditionalFlow(nn.Module):
     def __init__(self, channels, dim, scales, scale_depth):
         super(UnconditionalFlow, self).__init__()
