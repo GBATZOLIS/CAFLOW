@@ -116,7 +116,7 @@ class GatedConvNet(nn.Module):
         conv = [Conv1d, Conv2d, Conv3d][dim-1] #select the appropriate conv layer based on the dimension of the input tensor
         c_out = c_out if c_out > 0 else 2 * c_in
         
-        layers = []
+        layers = nn.ModuleList()
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1)]
         for layer_index in range(num_layers):
             layers += [GatedConv(c_hidden, c_hidden, dim),

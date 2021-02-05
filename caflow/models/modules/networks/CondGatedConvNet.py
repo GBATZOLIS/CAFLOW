@@ -55,7 +55,7 @@ class CondGatedConvNet(nn.Module):
         c_out = c_out if c_out > 0 else 2 * c_in
     
         #reshape conditional rvs to the same shape as z using convolution
-        self.interpolate_layers = []
+        self.interpolate_layers = nn.ModuleList()
         for i in range(num_cond_rvs):
             if not last_scale:
                 self.interpolate_layers.append(conv(in_channels=c_in//2**dim, out_channels=c_in, 
@@ -67,7 +67,7 @@ class CondGatedConvNet(nn.Module):
             
         
         #main network
-        layers = []
+        layers = nn.ModuleList()
         
         if self.layer_type =='injector':
             input_channels = num_cond_rvs * c_in
