@@ -41,10 +41,10 @@ class SharedConditionalFlow(nn.Module):
                     
                 self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, last_scale=last_scale))
         
-        #print(len(self.g_I_cond_flows))
-        #print(len(self.g_S_cond_flows))
+        #print(len(self.g_I_cond_flows)) #n
+        #print(len(self.g_S_cond_flows)) #n-1
         
-        #self.device = opts.device['Cond_flow'] #we will take care of that later
+        #self.device = opts.device['Cond_flow'] #we do not need that if we use pytorch-lightning
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
 
     def calculate_scale_channels(self, dim, scale, flow_type='g_I'):
@@ -200,7 +200,15 @@ class SharedConditionalFlow(nn.Module):
         if not shortcut:
             """done"""
             #z is a list of the latent tensors of each flow
-            #z = [[z_{n-1}, ..., z_0],[z_{n-2}, ..., z_0],...,[z_2, z_1, z_0],[z_1, z_0], [z_0]]
+            #z = [ [z_(n-1)^(n-1), z_(n-2)^(n-1), z_(n-3)^(n-1), z_(n-4)^(n-1), ..., z_1^(n-1), z_0^(n-1)],
+            #      [z_(n-2)^(n-2), z_(n-3)^(n-2), z_(n-4)^(n-2), ..., z_1^(n-2), z_0^(n-2)],
+            #      [z_(n-3)^(n-3), z_(n-4)^(n-3) ,..., z_1^(n-3), z_0^(n-3)],
+            #      ...,
+            #      [z_2^2,         z_1^2, z_0^2],
+            #      [z_1^1,         z_0^1], 
+            #      [z_0^0] 
+            #    ]
+            
             n=self.scales
             for i in range(n):
                 if i==0:

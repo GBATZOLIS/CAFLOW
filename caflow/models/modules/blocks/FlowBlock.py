@@ -11,8 +11,8 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
                           InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
-
-
+from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
+from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 
 class FlowBlock(nn.Module):
     def __init__(self, channels, dim, depth):
@@ -46,7 +46,7 @@ class FlowBlock(nn.Module):
 
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
                                                    dim=dim, mask_info={'mask_type':'channel', 'invert':False},
-                                                   network=GatedConvNet(c_in=transformed_channels, dim=dim, 
+                                                   network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
                                                                    c_hidden=2*transformed_channels, 
                                                                    c_out=-1, num_layers=1)))
     

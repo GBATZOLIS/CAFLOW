@@ -21,15 +21,106 @@ import time
 # and conditional flows under the mri_to_pet file
 """
 
+def test_equality(z_short, z_normal):
+    """z_normal"""
+    # z = [ [z_(n-1)^(n-1), z_(n-2)^(n-1), z_(n-3)^(n-1), z_(n-4)^(n-1), ..., z_1^(n-1), z_0^(n-1)],
+    #       [z_(n-2)^(n-2), z_(n-3)^(n-2), z_(n-4)^(n-2), ..., z_1^(n-2), z_0^(n-2)],
+    #       [z_(n-3)^(n-3), z_(n-4)^(n-3) ,..., z_1^(n-3), z_0^(n-3)],
+    #       ...,
+    #       [z_2^2,         z_1^2, z_0^2],
+    #       [z_1^1,         z_0^1], 
+    #       [z_0^0] 
+    #     ]
+
+    """z_short"""
+    # z = [z_I, z_S]
+    # z_I = [ z_(n-1)^(n-1), z_(n-2)^(n-2), ..., z_2^2, z_1^1, z_0^0 ]
+    # z_S = [ z_(n-2)^(n-1),      
+    #         z_(n-3)^(n-1)||z_(n-3)^(n-2),       
+    #         z_(n-4)^(n-1)||z_(n-4)^(n-2)||z_(n-4)^(n-3), 
+    #            ...,              
+    #         z_1^(n-1)||z_1^(n-2)|| ... ||z_1^2,       
+    #         z_0^(n-1)||z_0^(n-2)|| ... ||z_0^2||z_0^1
+    #        ]
+    # concatenation || takes place in the zero dimension (dim=0)
+
+    # way to test equality
+    # Create the z_short latent vector from the z_normal latent vector and test equality
+    # We can also do the opposite because this is a helpful functionality
+
+    def convert_shortcut_to_normal(z_short):
+        z_I = z_short[0]
+        z_S = z_short[1]
+
+        n = len(z_I)
+        z = []
+        for i in range(n):
+            iflow = []
+            iflow.append(z_short[0][i])
+            z.append(iflow)
+        
+        for i in range(1, n):
+            if i==1:
+                z[0].append(z_S[i-1])
+            else:
+                batch = z_S[i-1].size(0)//i
+                for j in range(i):
+                    z[j].append(z_S[i-1][batch*j:batch*(j+1)])
+        
+        return z
+
+    def convert_normal_to_shortcut(z_normal):
+        n = len(z_normal)
+
+        z_I = []
+        for i in range(n):
+            z_I.append(z_normal[i][0])
+        
+        z_S = []
+        for i in range(1, n):
+            if i==1:
+                z_S.append(z_normal[0][1])
+            else:
+                concat_tensor = torch.cat([z_normal[j][i-j] for j in range(i)], dim=0)
+                z_S.append(concat_tensor)
+
+        z_short_converted = [z_I, z_S]
+        return z_short_converted
+
+    print('--------------CONVERT NORMAL TO SHORTCUT----------------')
+    z_short_converted = convert_normal_to_shortcut(z_normal)
+    for i in range(len(z_short)):
+        if i==0:
+            print('-----z_I comparison-----')
+        elif i==1:
+            print('-----z_S comparison-----')
+
+        for j, (converted, real) in enumerate(zip (z_short_converted[i], z_short[i])):
+            print('Element %d: summed absolute difference  :  %.16f' %(j, torch.sum(torch.abs(converted - real))))
+            print(converted.size(), real.size())
+    
+    print('--------------CONVERT SHORTCUT TO NORMAL ----------------')
+    z_normal_converted = convert_shortcut_to_normal(z_short)
+    for i in range(len(z_normal)):
+        print('-------%d flow-------' % i)
+        for j, (converted, real) in enumerate(zip(z_normal_converted[i], z_normal[i])):
+            print('Element %d: summed absolute difference  :  %.16f' %(j, torch.sum(torch.abs(converted - real))))
+            #print(converted.size(), real.size())
+
+
+
+
+
+
 #instantiate the unconditional flow
-rflow = UnconditionalFlow(channels=3, dim=2, scales=3, scale_depth=2)
-tflow = UnconditionalFlow(channels=3, dim=2, scales=3, scale_depth=2)
+rflow = UnconditionalFlow(channels=3, dim=2, scales=6, scale_depth=1)
+tflow = UnconditionalFlow(channels=3, dim=2, scales=6, scale_depth=1)
 
 
-Y = torch.randn((2, 3, 64, 64), dtype=torch.float32)
+Y = torch.randn((3, 3, 256, 256), dtype=torch.float32)
 print('y shape: ', Y.size())
 
-I = torch.randn((2, 3, 64, 64), dtype=torch.float32)
+I = torch.randn((3, 3, 256, 256), dtype=torch.float32)
 
 print('Encoding Y and I with the forward pass...We get D and L.')
 with torch.no_grad():
@@ -41,7 +132,7 @@ for i, (D_i, L_i) in enumerate(zip(D,L)):
     print(i, D_i.size(), L_i.size())
 
 
-condflow = SharedConditionalFlow(channels=3, dim=2, scales=3, scale_depth=2)
+condflow = SharedConditionalFlow(channels=3, dim=2, scales=6, scale_depth=1)
 
 
 
@@ -49,26 +140,25 @@ condflow = SharedConditionalFlow(channels=3, dim=2, scales=3, scale_depth=2)
 with torch.no_grad():
     start = time.time()
     z_normal, logprob, logdet = condflow(L=L, z=[], D=D, reverse=False, shortcut=False)
-    print(logprob)
-    print(logdet)
     L_pred_normal, logdet = condflow(L=[], z=z_normal, D=D, reverse=True, shortcut=False)
-    print(logdet)
     end = time.time()
     normal_time = end - start
     
     
     start = time.time()
     z_short, logprob, logdet = condflow(L=L, z=[], D=D, reverse=False, shortcut=True)
-    print(logprob)
-    print(logdet)
     L_pred_short, logdet = condflow(L=[], z=z_short, D=D, reverse=True, shortcut=True)
-    print(logdet)
     end = time.time()
     shortcut_time = end - start
+
+print('normal time: ', normal_time)
+print('shortcut time: ', shortcut_time)
+
+test_equality(z_short, z_normal) #passed
     
 
 
-"""
+
 for L_i, L_pred_normal_i, L_pred_short_i in zip(L, L_pred_normal, L_pred_short):
     r_normal = torch.abs(L_i - L_pred_normal_i)
     r_shortcut = torch.abs(L_i - L_pred_short_i)
@@ -77,35 +167,12 @@ for L_i, L_pred_normal_i, L_pred_short_i in zip(L, L_pred_normal, L_pred_short):
     print('---------------------------')
     print('torch.sum(r_normal): ', torch.sum(r_normal))
     print('torch.mean(r_normal): ', torch.mean(r_normal))
+    print('torch.max(r_normal): ', torch.max(r_normal))
     print('------')
     print('torch.sum(r_shortcut): ', torch.sum(r_shortcut))
     print('torch.mean(r_shortcut): ', torch.mean(r_shortcut))
+    print('torch.max(r_shortcut): ', torch.max(r_shortcut))
     print('------')
     print('torch.sum(r_shortcut_normal): ', torch.sum(r_shortcut_normal))
     print('torch.mean(r_shortcut_normal): ', torch.mean(r_shortcut_normal))
-
-"""
-
-
-
-print('normal time: ', normal_time)
-print('shortcut time: ', shortcut_time)
-    
- 
-    
-
-
-
-"""
-condflow = SharedConditionalFlow(dim=3, scales=4, scale_depth=2, network=CondGatedConvNet)
-
-#Use D, L to get the conditional enconding of L without the shortcut.
-z_no_short, logprob, logdet = condflow(L=L, z=[], D=D, reverse=False, shortcut=False)
-
-#Use the enconding to retriece the original L
-L_pred, logdet = condflow(L=[], z=z_no_short, D=D, reverse=True, shortcut=False)
-
-r = torch.abs(L_pred[0]-L[0])
-print('sum(|y-y_dec|)',torch.sum(r))
-print('mean(|y-y_dec|):',torch.mean(r))
-"""
+    print('torch.max(r_shortcut_normal): ', torch.max(r_shortcut_normal))

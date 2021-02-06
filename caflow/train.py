@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--data-dim', type=int, default=2)
     parser.add_argument('--data-channels', type=int, default=3)
     parser.add_argument('--model-scales', type=int, default=3)
-    parser.add_argument('--model-scale_depth', type=int, default=2)
+    parser.add_argument('--model-scale_depth', type=int, default=8)
     parser.add_argument('--train-shortcut', type=bool, default=False)
     
     #The following arguments are used for conditional image sampling in the validation process
