@@ -186,19 +186,18 @@ class CAFlow(pl.LightningModule):
         return [optimizer], [scheduler]
     
     #@torch.no_grad()
-    def sample(self, Y, shortcut=True):
+    def sample(self, Y, shortcut=True, xtreme_shortcut=False):
         D, _, _ =self.model['rflow'](y=Y)
+        #start_shape = D[0].shape #(batchsize, 2*(dim-1)*self.channels, init_res/2, init_res/2, init_res/2)
+        batch_size = D[0].shape[0]
+        init_res = D[0].shape[2:]
+        init_channels = D[0].shape[1]
 
-        if shortcut:
+        if shortcut and not xtreme_shortcut:
             #D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
             #z_I=z[0] #[z_(n-1)^(n-1), z_(n-2)^(n-2), ..., z_2^2, z_1^1, z_0^0]
             #z_S=z[1] #[z_(n-2)^(n-1),      z_(n-3)^(n-1)||z_(n-3)^(n-2),       z_(n-4)^(n-1)||z_(n-4)^(n-2)||z_(n-4)^(n-3), 
                         # ...,              z_1^(n-1)||z_1^(n-2)|| ... ||z_1^2,       z_0^(n-1)||z_0^(n-2)|| ... ||z_0^1     ]
-            
-            #start_shape = D[0].shape #(batchsize, 2*(dim-1)*self.channels, init_res/2, init_res/2, init_res/2)
-            batch_size = D[0].shape[0]
-            init_res = D[0].shape[2:]
-            init_channels = D[0].shape[1]
 
             z_I = []
             z_S = []
@@ -207,24 +206,54 @@ class CAFlow(pl.LightningModule):
                     right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
                     if scale == 0:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape))
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
                     else:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape))
-                        concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:])
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
+                        concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:]).to(self.device)
                         z_S.append(concat_z_S)
                         
                 elif scale == self.scales-1: #last scale
                     right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I))
+                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).to(self.device))
 
                     right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
-                    concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:])
+                    concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:]).to(self.device)
                     z_S.append(concat_z_S)
             
             z_short = [z_I, z_S]
             L_pred_short, _ = self.model['condflow'](L=[], z=z_short, D=D, reverse=True, shortcut=True)
+            I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
+            
+            return I_sample
+        
+        elif shortcut and xtreme_shortcut:
+            z_I = []
+            z_S = []
+            for scale in range(self.scales):
+                if scale < self.scales-1:
+                    right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
+                    if scale == 0:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
+                    else:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
+                        concat_z_S = self.prior.sample(sample_shape=crop_left_shape).to(self.device)
+                        z_S.append(concat_z_S)
+                        
+                elif scale == self.scales-1: #last scale
+                    right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
+                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).to(self.device))
+
+                    right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
+                    concat_z_S = self.prior.sample(sample_shape=crop_left_shape_S).to(self.device)
+                    z_S.append(concat_z_S)
+            
+            z_xtreme_short = [z_I, z_S]
+            L_pred_short, _ = self.model['condflow'](L=[], z=z_xtreme_short, D=D, reverse=True, shortcut=True, xtreme_shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             
             return I_sample

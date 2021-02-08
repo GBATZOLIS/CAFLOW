@@ -26,7 +26,11 @@ def main(hparams):
                                 num_workers=hparams.val_workers, 
                                 collate_fn=torch_collate)
     
-    model = CAFlow(hparams)
+    if hparams.checkpoint_path is not None:
+        model = CAFlow.load_from_checkpoint(checkpoint_path=hparams.checkpoint_path)
+    else:
+        model = CAFlow(hparams)
+        
     trainer = Trainer(gpus=hparams.gpus)
     trainer.fit(model, train_dataloader, val_dataloader)
 
@@ -36,6 +40,7 @@ if __name__ == '__main__':
     #Trainer arguments
     parser.add_argument('--gpus', default=None)
     parser.add_argument('--lr', type=float, default=1e-3, help='initial learning rate')
+    parser.add_argument('--checkpoint_path', type=str, default=None, help='checkpoint path')
     
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)

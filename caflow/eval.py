@@ -25,7 +25,7 @@ def main(hparams):
                                  collate_fn=torch_collate)
     
     model = CAFlow.load_from_checkpoint(checkpoint_path='lightning_logs/version_7/checkpoints/epoch=16-step=2157.ckpt',
-                               opts=hparams)
+                                        opts=hparams)
     
     trainer = Trainer(gpus=hparams.gpus)
     trainer.test(model, test_dataloaders=test_dataloader)
