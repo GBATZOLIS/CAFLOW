@@ -11,29 +11,17 @@ You need to implement the following functions:
     -- <__getitem__>: Return a data point and its metadata information.
     -- <__len__>: Return the number of images.
 """
-from data.base_dataset import BaseDataset, get_transform
+from caflow.data.base_dataset import BaseDataset, get_transform
+from caflow.data.create_dataset import load_image_paths
+import os
+import torchvision.transforms as transforms
 # from data.image_folder import make_dataset
-# from PIL import Image
+from PIL import Image
 
 
 class TemplateDataset(BaseDataset):
     """A template dataset class for you to implement custom datasets."""
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        """Add new dataset-specific options, and rewrite default values for existing options.
-
-        Parameters:
-            parser          -- original option parser
-            is_train (bool) -- whether training phase or test phase. You can use this flag to add training-specific or test-specific options.
-
-        Returns:
-            the modified parser.
-        """
-        parser.add_argument('--new_dataset_option', type=float, default=1.0, help='new dataset option')
-        parser.set_defaults(max_dataset_size=10, new_dataset_option=2.0)  # specify dataset-specific default values
-        return parser
-
-    def __init__(self, opt):
+    def __init__(self,  opts, phase):
         """Initialize this dataset class.
 
         Parameters:
@@ -45,11 +33,16 @@ class TemplateDataset(BaseDataset):
         - define the image transformation.
         """
         # save the option and dataset root
-        BaseDataset.__init__(self, opt)
+        BaseDataset.__init__(self, opts)
+        
         # get the image paths of your dataset;
-        self.image_paths = []  # You can call sorted(make_dataset(self.root, opt.max_dataset_size)) to get all the image paths under the directory self.root
+        self.image_paths = load_image_paths(opts.dataroot, phase)
+
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
-        self.transform = get_transform(opt)
+        #self.transform = get_transform(opts)
+        #transform_list = [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        transform_list = [transforms.ToTensor()]
+        self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -65,11 +58,15 @@ class TemplateDataset(BaseDataset):
         Step 3: convert your data to a PyTorch tensor. You can use helpder functions such as self.transform. e.g., data = self.transform(image)
         Step 4: return a data point as a dictionary.
         """
-        path = 'temp'    # needs to be a string
-        data_A = None    # needs to be a tensor
-        data_B = None    # needs to be a tensor
-        return {'data_A': data_A, 'data_B': data_B, 'path': path}
 
+        A_path = self.image_paths['A'][index]
+        B_path = self.image_paths['B'][index]
+        A = Image.open(A_path).convert('RGB')
+        B = Image.open(B_path).convert('RGB')
+        A_transformed = self.transform(A)
+        B_transformed = self.transform(B)
+        return A_transformed, B_transformed
+        
     def __len__(self):
         """Return the total number of images."""
-        return len(self.image_paths)
+        return len(self.image_paths['A'])

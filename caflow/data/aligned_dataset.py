@@ -49,8 +49,6 @@ class AlignedDataset(BaseDataset):
 
         A = A_transform(A)
         B = B_transform(B)
-        #print(A.shape)
-        #print(B.shape)
         return A, B
 
     def __len__(self):

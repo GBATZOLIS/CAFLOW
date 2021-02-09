@@ -43,7 +43,7 @@ class CAFlow(pl.LightningModule):
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
         
         #optimiser settings
-        self.init_learning_rate = opts.lr
+        self.learning_rate = opts.learning_rate
 
     def forward(self, Y, shortcut=True):
         return self.sample(Y, shortcut=shortcut)
@@ -181,7 +181,7 @@ class CAFlow(pl.LightningModule):
         
         
     def configure_optimizers(self,):
-        optimizer = optim.Adam(self.parameters(), lr=self.init_learning_rate)
+        optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.99)
         return [optimizer], [scheduler]
     

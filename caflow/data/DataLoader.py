@@ -12,6 +12,10 @@ import queue
 from itertools import cycle
 
 
+#This file implements a dataloader which does prefetching while the GPU is running. 
+#It intends to accelerate dataloading and reduce the probability that dataloading becomes a bottleneck.
+#Apart from prefetching which is implemented here, we can also look at the NVIDIA DALI library for faster dataloading.
+
 def default_collate(batch):
     if isinstance(batch[0], np.ndarray):
         return np.stack(batch)
