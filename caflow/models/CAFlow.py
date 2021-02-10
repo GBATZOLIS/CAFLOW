@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch
 import torch.optim as optim
 import torchvision
+import numpy as np
 
 class CAFlow(pl.LightningModule):
     def __init__(self, opts):
@@ -48,18 +49,23 @@ class CAFlow(pl.LightningModule):
     def forward(self, Y, shortcut=True):
         return self.sample(Y, shortcut=shortcut)
 
-    def logjoint(self, Y, I, shortcut=False):
+    def logjoint(self, Y, I, shortcut=False, scaled=True):
         D, rlogprior, rlogdet = self.model['rflow'](y=Y)
         L, _, tlogdet = self.model['tflow'](y=I)
         Z_cond, condlogprior, condlogdet = self.model['condflow'](L=L, z=[], D=D, reverse=False, shortcut=shortcut)
 
         logjoint = rlogprior + rlogdet + tlogdet + condlogprior + condlogdet
-        return logjoint
+
+        if scaled:
+            scaled_logjoint = logjoint*np.log2(np.exp(1))/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
+            return scaled_logjoint
+        else:
+            return logjoint
     
     def training_step(self, batch, batch_idx):
         Y, I = batch
-        neg_avg_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.train_shortcut))
-        loss = neg_avg_logjoint
+        neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.train_shortcut, scaled=True))
+        loss = neg_avg_scaled_logjoint
         
         #logging
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -70,8 +76,8 @@ class CAFlow(pl.LightningModule):
         metric_dict = {}
         
         Y, I = batch
-        neg_avg_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.train_shortcut))
-        loss = neg_avg_logjoint
+        neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.train_shortcut, scaled=True))
+        loss = neg_avg_scaled_logjoint
         metric_dict['val_loss'] = loss
         
         I_sample =  self.sample(Y)
