@@ -125,7 +125,7 @@ class CAFlow(pl.LightningModule):
         print('------- current epoch: %d -------' % self.current_epoch)
         for key in print_dict.keys():
             print_dict[key] = torch.mean(torch.tensor(print_dict[key])).item()
-            print('%s : %.3f' % (key, print_dict[key]))
+            print('%s : %.12f' % (key, print_dict[key]))
         
         self.log_dict(print_dict)
             
