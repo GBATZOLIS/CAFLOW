@@ -15,7 +15,7 @@ from caflow.data.image_folder import is_image_file
 import os
 
 def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000):
-    phases_to_create = inspect_dataset(master_path, dataset_size) 
+    phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
     else:
@@ -45,9 +45,11 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                 A_resize.save(os.path.join(master_path, phase, 'A', basename))
                 B_resize.save(os.path.join(master_path, phase, 'B', basename))
 
-def inspect_dataset(master_path, dataset_size):
-    info = {'train':{'A':{'count':0, 'names':[]}, 'B':{'count':0, 'names':[]}}, \
-    'val':{'A':{'count':0, 'names':[]}, 'B':{'count':0, 'names':[]}}}
+def inspect_dataset(master_path, resize_size, dataset_size):
+    info = {'train':{'A':{'count':0, 'names':[], 'size':None}, \
+                     'B':{'count':0, 'names':[], 'size':None}}, \
+              'val':{'A':{'count':0, 'names':[], 'size':None}, \
+                     'B':{'count':0, 'names':[], 'size':None}}}
     
     for phase in ['train', 'val']:
         for domain in ['A', 'B']:
@@ -55,11 +57,17 @@ def inspect_dataset(master_path, dataset_size):
             if not os.path.exists(subpath):
                    os.mkdir(subpath)
             else:
+                i=0
                 for root, _, fnames in os.walk(subpath):
                     for fname in fnames:    
                         if is_image_file(fname):
                             info[phase][domain]['count'] += 1
                             info[phase][domain]['names'].append(os.path.basename(fname))
+                            if i==0:
+                                img = Image.open(os.path.join(subpath, fname)).convert('RGB')
+                                w, h = img.size
+                                info[phase][domain]['size'] = w #we assume w = h
+                            i+=1
 
     empty = {'train':True, 'val':True}
     for phase in ['train', 'val']:
@@ -68,11 +76,16 @@ def inspect_dataset(master_path, dataset_size):
 
     for phase in ['train', 'val']:
         try:
+            #check the count
             assert info[phase]['A']['count'] == info[phase]['B']['count']
-
             if phase == 'train':
                 assert info[phase]['A']['count'] == dataset_size
 
+            #check image size
+            assert info[phase]['A']['size'] == resize_size
+            assert info[phase]['B']['size'] == resize_size
+
+            #check image pairing
             for i in range(info[phase]['A']['count']):
                 assert info[phase]['A']['names'][i]==info[phase]['B']['names'][i]
 
@@ -81,7 +94,7 @@ def inspect_dataset(master_path, dataset_size):
                 subpath = os.path.join(master_path, phase, domain)
                 for root, _, fnames in os.walk(subpath):
                     for fname in fnames:
-                        os.remove(fname)
+                        os.remove(os.path.join(subpath, fname))
                 
             empty[phase]=True
         
