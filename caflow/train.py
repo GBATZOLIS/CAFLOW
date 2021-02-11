@@ -27,7 +27,7 @@ def main(hparams):
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                 num_workers=hparams.val_workers)
     
-    trainer = Trainer(gpus=hparams.gpus)
+    trainer = Trainer(gpus=hparams.gpus, accelerator=hparams.accelerator)
 
     if hparams.checkpoint_path is not None:
         model = CAFlow.load_from_checkpoint(checkpoint_path=hparams.checkpoint_path)
