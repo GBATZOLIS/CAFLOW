@@ -59,15 +59,18 @@ def inspect_dataset(master_path, resize_size, dataset_size):
             else:
                 i=0
                 for root, _, fnames in os.walk(subpath):
+                    phase_domain_names = []
                     for fname in fnames:    
                         if is_image_file(fname):
                             info[phase][domain]['count'] += 1
-                            info[phase][domain]['names'].append(os.path.basename(fname))
+                            phase_domain_names.append(os.path.basename(fname))
                             if i==0:
                                 img = Image.open(os.path.join(subpath, fname)).convert('RGB')
                                 w, h = img.size
                                 info[phase][domain]['size'] = w #we assume w = h
                             i+=1
+                    
+                    info[phase][domain]['names'] = sorted(phase_domain_names)
 
     empty = {'train':True, 'val':True}
     for phase in ['train', 'val']:
@@ -77,17 +80,20 @@ def inspect_dataset(master_path, resize_size, dataset_size):
     for phase in ['train', 'val']:
         try:
             #check the count
-            assert info[phase]['A']['count'] == info[phase]['B']['count']
+            assert info[phase]['A']['count'] == info[phase]['B']['count'], \
+            'Different count number between A and B domains.'
+
             if phase == 'train':
-                assert info[phase]['A']['count'] == dataset_size
+                assert info[phase]['A']['count'] == dataset_size, 'Dataset size different than requested.'
 
             #check image size
-            assert info[phase]['A']['size'] == resize_size
-            assert info[phase]['B']['size'] == resize_size
+            assert info[phase]['A']['size'] == resize_size, 'Domain A has different size than size requested'
+            assert info[phase]['B']['size'] == resize_size, 'Domain B has different size than size requested'
 
             #check image pairing
             for i in range(info[phase]['A']['count']):
-                assert info[phase]['A']['names'][i]==info[phase]['B']['names'][i]
+                assert info[phase]['A']['names'][i]==info[phase]['B']['names'][i], \
+                'Wrong image pairing. A:{} - B:{}'.format(info[phase]['A']['names'][i], info[phase]['B']['names'][i])
 
         except AssertionError:
             for domain in ['A', 'B']:
