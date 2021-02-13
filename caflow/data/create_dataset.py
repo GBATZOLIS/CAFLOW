@@ -23,7 +23,8 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
             print('Create {} dataset'.format(phase))
             data_paths = make_dataset(os.path.join(master_path, phase))
             for i in range(min(dataset_size, len(data_paths))):
-                print(i+1)
+                if (i+1) % 1000 == 0:
+                    print(i+1)
                 AB_path = data_paths[i]
                 basename = os.path.basename(AB_path)
                 
