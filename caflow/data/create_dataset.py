@@ -117,6 +117,7 @@ def load_image_paths(master_path, phase):
     #assertions
     assert len(images['A'])==len(images['B']), 'There is a mismatch in the number of domain A and domain B images.'
     for i in range(len(images['A'])):
-        assert os.path.basename(images['A'][i])==os.path.basename(images['B'][i]), 'The images are not paired.'
+        assert os.path.basename(images['A'][i])==os.path.basename(images['B'][i]), \
+               'The images are not paired. A:{} - B:{}'.format(os.path.basename(images['A'][i]), os.path.basename(images['B'][i]))
 
     return images
