@@ -125,13 +125,13 @@ def load_image_paths(master_path, phase):
         print('{} - {} - {}'.format(key, images[key][0], images[key][1]))
 
     load_images = {'A':[], 'B':[]}
-    for i, key in enumerate(images.keys()):
-        load_images['A'][i] = images[key][0]
-        load_images['B'][i] = images[key][1]
+    for key in images.keys():
+        load_images['A'].append(images[key][0])
+        load_images['B'].append(images[key][1])
 
     print(load_images['A'][:10])
     print(load_images['B'][:10])
-    
+
     #assertions
     assert len(load_images['A'])==len(load_images['B']), 'There is a mismatch in the number of domain A and domain B images.'
     for i in range(len(load_images['A'])):
