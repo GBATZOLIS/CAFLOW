@@ -108,19 +108,34 @@ def inspect_dataset(master_path, resize_size, dataset_size):
 def load_image_paths(master_path, phase):
     assert os.path.isdir(os.path.join(master_path, phase)), '%s is not a valid directory' % dir
     print('load img dir: {}'.format(os.path.join(master_path, phase)))
-    images={'A':[], 'B':[]}
-    for domain in images.keys():
-        for root, _, fnames in sorted(os.walk(os.path.join(master_path, phase, domain))):
+    domains = ['A', 'B']
+    images = {}
+    for domain in domains:
+        for root, _, fnames in os.walk(os.path.join(master_path, phase, domain)):
             for fname in fnames:
                 if is_image_file(fname):
                     path = os.path.join(root, fname)
-                    images[domain].append(path)
-    print(images['A'][:10])
-    print(images['B'][:10])
-    #assertions
-    assert len(images['A'])==len(images['B']), 'There is a mismatch in the number of domain A and domain B images.'
-    for i in range(len(images['A'])):
-        assert os.path.basename(images['A'][i])==os.path.basename(images['B'][i]), \
-               'The images are not paired. A:{} - B:{}'.format(os.path.basename(images['A'][i]), os.path.basename(images['B'][i]))
+                    if os.path.basename(path) not in images.keys():
+                        images[os.path.basename(path)]=[]
+                        images[os.path.basename(path)].append(path)
+                    else:
+                        images[os.path.basename(path)].append(path)
+    
+    for key in list(images.keys())[:10]:
+        print('{} - {} - {}'.format(key, images[key][0], images[key][1]))
 
-    return images
+    load_images = {'A':[], 'B':[]}
+    for i, key in enumerate(images.keys()):
+        load_images['A'][i] = images[key][0]
+        load_images['B'][i] = images[key][1]
+
+    print(load_images['A'][:10])
+    print(load_images['B'][:10])
+    
+    #assertions
+    assert len(load_images['A'])==len(load_images['B']), 'There is a mismatch in the number of domain A and domain B images.'
+    for i in range(len(load_images['A'])):
+        assert os.path.basename(load_images['A'][i])==os.path.basename(load_images['B'][i]), \
+               'The images are not paired. A:{} - B:{}'.format(os.path.basename(load_images['A'][i]), os.path.basename(load_images['B'][i]))
+
+    return load_images
