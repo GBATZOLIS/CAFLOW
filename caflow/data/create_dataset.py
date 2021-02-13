@@ -20,7 +20,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
         print('Datasets already in place.')
     else:
         for phase in phases_to_create:
-            print('phase: %s' % phase)
+            print('Create {} dataset'.format(phase))
             data_paths = make_dataset(os.path.join(master_path, phase))
             for i in range(min(dataset_size, len(data_paths))):
                 print(i+1)
@@ -115,6 +115,8 @@ def load_image_paths(master_path, phase):
                 if is_image_file(fname):
                     path = os.path.join(root, fname)
                     images[domain].append(path)
+    print(images['A'][:10])
+    print(images['B'][:10])
     #assertions
     assert len(images['A'])==len(images['B']), 'There is a mismatch in the number of domain A and domain B images.'
     for i in range(len(images['A'])):
