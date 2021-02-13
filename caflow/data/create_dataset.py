@@ -107,6 +107,7 @@ def inspect_dataset(master_path, resize_size, dataset_size):
 
 def load_image_paths(master_path, phase):
     assert os.path.isdir(os.path.join(master_path, phase)), '%s is not a valid directory' % dir
+    print('load img dir: {}'.format(os.path.join(master_path, phase)))
     images={'A':[], 'B':[]}
     for domain in images.keys():
         for root, _, fnames in sorted(os.walk(os.path.join(master_path, phase, domain))):
