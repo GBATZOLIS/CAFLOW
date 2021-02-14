@@ -9,6 +9,7 @@ Created on Tue Jan 19 22:02:53 2021
 import torch.nn as nn
 import torch
 from caflow.models.modules.blocks.FlowBlock import FlowBlock                    
+from caflow.models.modules.blocks.Dequantisation import Dequantisation
 
 class UnconditionalFlow(nn.Module):
     def __init__(self, channels, dim, scales, scale_depth):
@@ -19,6 +20,7 @@ class UnconditionalFlow(nn.Module):
         self.scales = scales
         
         self.scale_blocks = nn.ModuleList()
+        self.scale_blocks.append(Dequantisation())#next step is to add option for variational dequantisation
         
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
@@ -55,11 +57,13 @@ class UnconditionalFlow(nn.Module):
 
         h_pass = y
         z_enc = []
-        for i in range(self.scales):
-            if i==self.scales-1:
-                h_split, logdet = self.scale_blocks[i](h=h_pass, logdet=logdet, reverse=False)
+        
+        h_pass, logdet = self.scale_blocks[0](h_pass, logdet, False) #dequantisation
+        for i in range(1, self.scales+1):
+            if i==self.scales:
+                h_split, logdet = self.scale_blocks[i](h_pass, logdet, False)
             else:
-                h, logdet = self.scale_blocks[i](h=h_pass, logdet=logdet, reverse=False)
+                h, logdet = self.scale_blocks[i](h_pass, logdet, False)
                 h_split, h_pass = h.chunk(2, dim=1)
             
             logprior+=self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
@@ -80,8 +84,10 @@ class UnconditionalFlow(nn.Module):
                 concat_pass = h_split
             else:
                 concat_pass = torch.cat([h_split, h_pass], dim=1)
-            h_pass, logdet = self.scale_blocks[self.scales-1-i](h=concat_pass, logdet=logdet, reverse=True)
-
+            h_pass, logdet = self.scale_blocks[self.scales-i](concat_pass, logdet, True)
+        
+        h_pass, logdet = self.scale_blocks[0](h_pass, logdet, True) #quantisation
+        
         return h_pass, logdet
 
 
