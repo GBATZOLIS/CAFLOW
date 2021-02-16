@@ -12,7 +12,7 @@ from caflow.models.modules.blocks.FlowBlock import FlowBlock
 from caflow.models.modules.blocks.Dequantisation import Dequantisation
 
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth):
+    def __init__(self, channels, dim, scales, scale_depth, quants):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -20,11 +20,10 @@ class UnconditionalFlow(nn.Module):
         self.scales = scales
         
         self.scale_blocks = nn.ModuleList()
-        self.scale_blocks.append(Dequantisation())#next step is to add option for variational dequantisation
+        self.scale_blocks.append(Dequantisation(dim=dim, quants=quants))#next step is to add option for variational dequantisation
         
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
-            #print(scale_channels)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
                                                depth = scale_depth))

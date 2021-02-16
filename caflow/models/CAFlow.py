@@ -36,9 +36,9 @@ class CAFlow(pl.LightningModule):
 
         self.model = nn.ModuleDict()
         self.model['rflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.model_scale_depth)
+                                                scale_depth=opts.model_scale_depth, quants=opts.r_quants)
         self.model['tflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.model_scale_depth)
+                                                scale_depth=opts.model_scale_depth, quants=opts.t_quants)
         self.model['condflow'] = SharedConditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, scale_depth=opts.model_scale_depth)
         
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)

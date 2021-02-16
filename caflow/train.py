@@ -67,6 +67,8 @@ if __name__ == '__main__':
     parser.add_argument('--model-scales', type=int, default=4)
     parser.add_argument('--model-scale-depth', type=int, default=4)
     parser.add_argument('--train-shortcut', type=bool, default=False)
+    parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
+    parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
     #The following arguments are used for conditional image sampling in the validation process
     parser.add_argument('--num-val-samples', type=int, default=4, help='num of samples to generate in validation')
@@ -79,7 +81,7 @@ if __name__ == '__main__':
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
-    parser.add_argument('--train-batch', type=int, default=16, help='train batch size')
+    parser.add_argument('--train-batch', type=int, default=4, help='train batch size')
     parser.add_argument('--val-batch', type=int, default=4, help='val batch size')
     parser.add_argument('--train-workers', type=int, default=4, help='train_workers')
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')

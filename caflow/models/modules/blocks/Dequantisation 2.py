@@ -14,7 +14,7 @@ import numpy as np
 
 class Dequantisation(nn.Module):
 
-    def __init__(self, dim=2, quants=256, alpha=1e-5):
+    def __init__(self, alpha=1e-5, quants=256):
         """
         Inputs:
             alpha - small constant that is used to scale the original input.
@@ -22,14 +22,13 @@ class Dequantisation(nn.Module):
             quants - Number of possible discrete values (usually 256 for 8-bit image)
         """
         super().__init__()
-        self.dim = dim
-        self.quants = quants
         self.alpha = alpha
-        
+        self.quants = quants
+
     def forward(self, z, ldj, reverse=False):
         if not reverse:
             z, ldj = self.dequant(z, ldj)
-            z, ldj = self.sigmoid(z, ldj, reverse=True) # This is correct. you need the invert sigmoid after dequantisation.
+            z, ldj = self.sigmoid(z, ldj, reverse=True)
         else:
             z, ldj = self.sigmoid(z, ldj, reverse=False)
             z = z * self.quants
@@ -40,23 +39,22 @@ class Dequantisation(nn.Module):
     def sigmoid(self, z, ldj, reverse=False):
         # Applies an invertible sigmoid transformation
         if not reverse:
-            ldj += (-z-2*F.softplus(-z)).sum(dim = [i+1 for i in range(self.dim+1)])
+            ldj += (-z-2*F.softplus(-z)).sum(dim=[1,2,3])
             z = torch.sigmoid(z)
         else:
             z = z * (1 - self.alpha) + 0.5 * self.alpha  # Scale to prevent boundaries 0 and 1
             ldj += np.log(1 - self.alpha) * np.prod(z.shape[1:])
-            
-            ldj += (-torch.log(z) - torch.log(1-z)).sum(dim = [i+1 for i in range(self.dim+1)])
+            print(ldj.shape)
+            ldj += (-torch.log(z) - torch.log(1-z)).sum(dim=[1,2,3])
             z = torch.log(z) - torch.log(1-z)
-            
         return z, ldj
 
     def dequant(self, z, ldj):
         # Transform discrete values to continuous volumes
         z = z.to(torch.float32)
-        z = z + torch.rand_like(z)
+        z = z + torch.rand_like(z).detach()
         z = z / self.quants
-        ldj += -1 * np.log(self.quants) * np.prod(z.shape[1:])
+        ldj -= np.log(self.quants) * np.prod(z.shape[1:])
         return z, ldj
 
 
