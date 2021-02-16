@@ -17,7 +17,10 @@ import os
 import torchvision.transforms as transforms
 # from data.image_folder import make_dataset
 from PIL import Image
+import torch
 
+def discretize(sample):
+    return (sample * 255).to(torch.float32)
 
 class TemplateDataset(BaseDataset):
     """A template dataset class for you to implement custom datasets."""
@@ -41,7 +44,7 @@ class TemplateDataset(BaseDataset):
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
         #self.transform = get_transform(opts)
         #transform_list = [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-        transform_list = [transforms.ToTensor()]
+        transform_list = [transforms.ToTensor(), discretize]
         self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):

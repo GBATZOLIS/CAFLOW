@@ -34,7 +34,7 @@ class Dequantisation(nn.Module):
             z, ldj = self.sigmoid(z, ldj, reverse=False)
             z = z * self.quants
             ldj += np.log(self.quants) * np.prod(z.shape[1:])
-            z = torch.floor(z).clamp(min=0, max=self.quants-1).to(torch.int32)
+            z = torch.floor(z).clamp(min=0, max=self.quants-1)
         return z, ldj
 
     def sigmoid(self, z, ldj, reverse=False):
@@ -53,7 +53,6 @@ class Dequantisation(nn.Module):
 
     def dequant(self, z, ldj):
         # Transform discrete values to continuous volumes
-        z = z.to(torch.float32)
         z = z + torch.rand_like(z)
         z = z / self.quants
         ldj += -1 * np.log(self.quants) * np.prod(z.shape[1:])
