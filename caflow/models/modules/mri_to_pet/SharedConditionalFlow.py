@@ -14,7 +14,7 @@ import torch
 
 
 class SharedConditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth):
+    def __init__(self, channels, dim, scales, shared_scale_depth, unshared_scale_depth):
         super(SharedConditionalFlow, self).__init__()
 
         self.g_I_cond_flows = nn.ModuleList()
@@ -28,7 +28,7 @@ class SharedConditionalFlow(nn.Module):
         for scale in range(self.scales):
             g_I_channels = self.calculate_scale_channels(dim, scale, flow_type='g_I')
             #print('g_I_channels: ', g_I_channels)
-            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=scale_depth))
+            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=unshared_scale_depth))
             
             if scale > 0:#There is no shared flow in the first level
                 g_S_channels = self.calculate_scale_channels(dim, scale, flow_type='g_S')
@@ -39,7 +39,7 @@ class SharedConditionalFlow(nn.Module):
                 else:
                     last_scale=True
                     
-                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, last_scale=last_scale))
+                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=shared_scale_depth, last_scale=last_scale))
         
         #print(len(self.g_I_cond_flows)) #n
         #print(len(self.g_S_cond_flows)) #n-1

@@ -53,8 +53,8 @@ class Dequantisation(nn.Module):
 
     def dequant(self, z, ldj):
         # Transform discrete values to continuous volumes
-        z = z + torch.rand_like(z)
-        z = z / self.quants
+        z = z + torch.rand_like(z) #add uniform noise U(0,1)
+        z = z / self.quants 
         ldj += -1 * np.log(self.quants) * np.prod(z.shape[1:])
         return z, ldj
 

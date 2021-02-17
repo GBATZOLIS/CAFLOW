@@ -6,7 +6,9 @@ Created on Sun Jan 24 17:22:20 2021
 @author: gbatz97
 """
 
+import torch
 import torch.nn as nn
+from caflow.models.modules.blocks.ConditionalFlowBlock import g_S, g_I
 
 class UnsharedConditionalFlow(nn.Module):
     def __init__(self, channels, dim, scales, scale_depth):
@@ -59,7 +61,7 @@ class UnsharedConditionalFlow(nn.Module):
         for i in range(self.scales):
             z_horizontal=[]                
             if i==self.scales-1:
-                h_split, logdet = self.g_I_cond_flows[i][0](L[i], D[i], logdet, reverse=False)
+                h_split, logdet = self.scale_flows[i][0](L[i], D[i], logdet, reverse=False)
                 logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                 z_horizontal.append(h_split)
             else:
@@ -67,13 +69,13 @@ class UnsharedConditionalFlow(nn.Module):
                 h_split, h_pass = h_pass.chunk(2, dim=1)
                 logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                 z_horizontal.append(h_split)
-                for j in range(i, self.scales-1):
-                    if j==self.scales-2:
-                        h_split, logdet = self.scale_flows[i][j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
+                for j in range(i+1, self.scales):
+                    if j==self.scales-1:
+                        h_split, logdet = self.scale_flows[i][j-i](h_pass, L[j], D[j], logdet, reverse=False)
                         logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                         z_horizontal.append(h_split)
                     else:
-                        h_pass, logdet = self.scale_flows[i][j](h_pass, L[j+1], D[j+1], logdet, reverse=False)
+                        h_pass, logdet = self.scale_flows[i][j-i](h_pass, L[j], D[j], logdet, reverse=False)
                         h_split, h_pass = h_pass.chunk(2, dim=1)
                         logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
                         z_horizontal.append(h_split)

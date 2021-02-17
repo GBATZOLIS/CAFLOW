@@ -114,7 +114,7 @@ def inspect_dataset(master_path, resize_size, dataset_size):
 
 def load_image_paths(master_path, phase):
     assert os.path.isdir(os.path.join(master_path, phase)), '%s is not a valid directory' % dir
-    print('load img dir: {}'.format(os.path.join(master_path, phase)))
+    #print('load img dir: {}'.format(os.path.join(master_path, phase)))
     domains = ['A', 'B']
     images = {}
     for domain in domains:
@@ -128,16 +128,16 @@ def load_image_paths(master_path, phase):
                     else:
                         images[os.path.basename(path)].append(path)
     
-    for key in list(images.keys())[:10]:
-        print('{} - {} - {}'.format(key, images[key][0], images[key][1]))
+    #for key in list(images.keys())[:10]:
+    #    print('{} - {} - {}'.format(key, images[key][0], images[key][1]))
 
     load_images = {'A':[], 'B':[]}
     for key in images.keys():
         load_images['A'].append(images[key][0])
         load_images['B'].append(images[key][1])
 
-    print(load_images['A'][:10])
-    print(load_images['B'][:10])
+    print(load_images['A'][:3])
+    print(load_images['B'][:3])
 
     #assertions
     assert len(load_images['A'])==len(load_images['B']), 'There is a mismatch in the number of domain A and domain B images.'

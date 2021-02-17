@@ -64,19 +64,29 @@ if __name__ == '__main__':
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
     parser.add_argument('--data-channels', type=int, default=3)
+
+    parser.add_argument('--shared', default=False, action='store_true', help='Set shared to True if want to use shared conditional flow instead of normal conditional flow.')
+    parser.add_argument('--train-shortcut', default=True, action='store_false')
+    parser.add_argument('--val-shortcut', default=True, action='store_false')
+    
     parser.add_argument('--model-scales', type=int, default=4)
-    parser.add_argument('--model-scale-depth', type=int, default=4)
-    parser.add_argument('--train-shortcut', type=bool, default=False)
+    parser.add_argument('--rflow-scale-depth', type=int, default=16)
+    parser.add_argument('--tflow-scale-depth', type=int, default=16)
+    parser.add_argument('--u-cond-scale-depth', type=int, default=1, help='unshared conditional scale depth')
+    parser.add_argument('--s-cond-s-scale-depth', type=int, default=2, help='shared conditional shared scale depth')
+    parser.add_argument('--s-cond-u-scale-depth', type=int, default=2, help='shared conditional unshared scale depth')
+    
+
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
     #The following arguments are used for conditional image sampling in the validation process
     parser.add_argument('--num-val-samples', type=int, default=4, help='num of samples to generate in validation')
     parser.add_argument('--sample-padding', type=int, default=2, help='Amount of padding' )
-    parser.add_argument('--sample-normalize', type=bool, default=False, help='If True, shift the image to the range (0, 1), by the min and max values specified by range. Default: False' )
-    parser.add_argument('--sample-norm-range', type=tuple, default=None, help='Tuple (min, max) where min and max are numbers, then these numbers are used to normalize the image. \
+    parser.add_argument('--sample-normalize', default=True, action='store_false', help='If True, shift the image to the range (0, 1), by the min and max values specified by range. Default: False' )
+    parser.add_argument('--sample-norm-range', type=tuple, default=(0, 255), help='Tuple (min, max) where min and max are numbers, then these numbers are used to normalize the image. \
                                                                         By default, min and max are computed from the tensor.')
-    parser.add_argument('--sample-scale-each', type=bool, default=False, help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
+    parser.add_argument('--sample-scale-each', default=False, action='store_true', help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample-pad-value', type=int, default=0)
     
     #program arguments
@@ -90,8 +100,8 @@ if __name__ == '__main__':
     parser.add_argument('--max-dataset-size', type=int, default=5000, help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
     parser.add_argument('--load-size', type=int, default=64)
-    parser.add_argument('--preprocess', type=bool, default=['resize'])
-    parser.add_argument('--no-flip', default=True, help='if specified, do not flip the images for data argumentation')
+    parser.add_argument('--preprocess', default=['resize'])
+    parser.add_argument('--no-flip', default=True, action='store_false', help='if specified, do not flip the images for data argumentation')
     
     args = parser.parse_args()
 
