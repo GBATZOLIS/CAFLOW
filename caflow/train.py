@@ -81,7 +81,7 @@ if __name__ == '__main__':
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     
     #the rest are related to the specific dataset and the required transformations
-    parser.add_argument('--max-dataset-size', type=int, default=5000, help='Maximum number of samples allowed per dataset. \
+    parser.add_argument('--max-dataset-size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--preprocess', default=['resize'])

@@ -13,7 +13,6 @@ import numpy as np
 
 
 class Dequantisation(nn.Module):
-
     def __init__(self, dim=2, quants=256, alpha=1e-5):
         """
         Inputs:
@@ -62,29 +61,28 @@ class Dequantisation(nn.Module):
 
 class VariationalDequantization(Dequantisation):
 
-    def __init__(self, var_flows, alpha=1e-5):
+    def __init__(self, var_flows, dim=2, quants=256, alpha=1e-5):
         """
         Inputs:
             var_flows - A list of flow transformations to use for modeling q(u|x)
             alpha - Small constant, see Dequantization for details
         """
-        super().__init__(alpha=alpha)
+        super().__init__(dim, quants, alpha)
         self.flows = nn.ModuleList(var_flows)
 
     def dequant(self, z, ldj):
-        z = z.to(torch.float32)
-        img = (z / 255.0) * 2 - 1 # We condition the flows on x, i.e. the original image
+        img = (z / (self.quants-1))) * 2 - 1 # We condition the flows on x, i.e. the original image
 
         # Prior of u is a uniform distribution as before
         # As most flow transformations are defined on [-infinity,+infinity], we apply an inverse sigmoid first.
-        deq_noise = torch.rand_like(z).detach()
+        deq_noise = torch.rand_like(z)
         deq_noise, ldj = self.sigmoid(deq_noise, ldj, reverse=True)
         for flow in self.flows:
             deq_noise, ldj = flow(deq_noise, ldj, reverse=False, orig_img=img)
         deq_noise, ldj = self.sigmoid(deq_noise, ldj, reverse=False)
 
         # After the flows, apply u as in standard dequantization
-        z = (z + deq_noise) / 256.0
-        ldj -= np.log(256.0) * np.prod(z.shape[1:])
+        z = (z + deq_noise) / self.quants
+        ldj -= np.log(self.quants) * np.prod(z.shape[1:])
         return z, ldj
 
