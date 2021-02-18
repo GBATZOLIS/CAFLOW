@@ -27,39 +27,23 @@ def main(hparams):
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                 num_workers=hparams.val_workers)
     
-    trainer = Trainer(gpus=hparams.gpus, accelerator=hparams.accelerator)
-
-    if hparams.checkpoint_path is not None:
-        model = CAFlow.load_from_checkpoint(checkpoint_path=hparams.checkpoint_path)
-    else:
-        model = CAFlow(hparams)
-
-        if hparams.auto_lr_find:
-            """It does not lead to improvement of performance. It seems to create a problem in the training dynamics. Do not use it until further inverstigation."""
-            # Run learning rate finder
-            lr_finder = trainer.tuner.lr_find(model, train_dataloader)
-            # Plot with
-            #fig = lr_finder.plot(suggest=True)
-            #fig.show()
-            # Pick point based on plot, or get suggestion
-            new_lr = lr_finder.suggestion()
-            print('selected learning rate: %.4f' % new_lr)
-            # update hparams of the model
-            model.hparams.learning_rate = new_lr
-    
+    model = CAFlow(hparams)
+    trainer = Trainer(gpus=hparams.gpus, accelerator=hparams.accelerator, \
+                      accumulate_grad_batches=hparams.accumulate_grad_batches, \
+                      resume_from_checkpoint=hparams.resume_from_checkpoint)
     trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     
     #Trainer arguments
-    parser.add_argument('--checkpoint_path', type=str, default=None, help='checkpoint path')
+    parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
     parser.add_argument('--gpus', default=None)
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
-    parser.add_argument('--auto_scale_batch_size', type=str, default=None, help='Automatically tries to find the largest batch size that fits into memory, before any training.')
-    parser.add_argument('--auto_lr_find', type=bool, default=False, help='Using Lightning’s built-in LR finder.') #do not use it for the time being. Needs to be investigated further.
+    #parser.add_argument('--auto_scale_batch_size', type=str, default=None, help='Automatically tries to find the largest batch size that fits into memory, before any training.')
+    #parser.add_argument('--auto_lr_find', type=bool, default=False, help='Using Lightning’s built-in LR finder.') #do not use it for the time being. Needs to be investigated further.
 
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
