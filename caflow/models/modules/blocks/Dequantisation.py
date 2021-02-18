@@ -71,7 +71,7 @@ class VariationalDequantization(Dequantisation):
         self.flows = nn.ModuleList(var_flows)
 
     def dequant(self, z, ldj):
-        img = (z / (self.quants-1))) * 2 - 1 # We condition the flows on x, i.e. the original image
+        img = (z / (self.quants-1)) * 2 - 1 # We condition the flows on x, i.e. the original image
 
         # Prior of u is a uniform distribution as before
         # As most flow transformations are defined on [-infinity,+infinity], we apply an inverse sigmoid first.
