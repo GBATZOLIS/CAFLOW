@@ -96,6 +96,8 @@ class CAFlow(pl.LightningModule):
         #self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
+    def training_step_end(self, training_step_outputs):
+        return training_step_outputs.sum()
     
     def validation_step(self, batch, batch_idx):
         metric_dict = {}
