@@ -139,7 +139,7 @@ class CAFlow(pl.LightningModule):
             str_title = 'val_samples_epoch_%d__batch_%d' % (self.current_epoch, batch_idx)
             self.logger.experiment.add_image(str_title, grid, self.current_epoch)
         
-      return metric_dict
+      #return metric_dict
 
     """       
     def validation_epoch_end(self, outputs):
