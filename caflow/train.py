@@ -28,7 +28,7 @@ def main(hparams):
                                 num_workers=hparams.val_workers)
     
     model = CAFlow(hparams)
-    trainer = Trainer(gpus=hparams.gpus, accelerator=hparams.accelerator, \
+    trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                       accumulate_grad_batches=hparams.accumulate_grad_batches, \
                       resume_from_checkpoint=hparams.resume_from_checkpoint)
     trainer.fit(model, train_dataloader, val_dataloader)
@@ -39,6 +39,7 @@ if __name__ == '__main__':
     #Trainer arguments
     parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
     parser.add_argument('--gpus', default=None)
+    parser.add_argument('--num_nodes', type=int, default=1, help='Number of nodes. Default=1.')
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
