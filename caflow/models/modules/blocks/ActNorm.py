@@ -73,6 +73,7 @@ class ActNorm(nn.Module):
             logs is log_std of `mean of channels`
             so we need to multiply pixels
             """
+            print(logs.shape)
             dlogdet = torch.sum(logs) * np.prod(input.shape[2:])
             dlogdet = dlogdet.repeat((input.size(0)))
             if reverse:
