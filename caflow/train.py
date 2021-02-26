@@ -75,8 +75,8 @@ if __name__ == '__main__':
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
-    parser.add_argument('--train-batch', type=int, default=4, help='train batch size')
-    parser.add_argument('--val-batch', type=int, default=4, help='val batch size')
+    parser.add_argument('--train-batch', type=int, default=8, help='train batch size')
+    parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
     parser.add_argument('--train-workers', type=int, default=4, help='train_workers')
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     

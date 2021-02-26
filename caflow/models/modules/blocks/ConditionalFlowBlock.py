@@ -14,6 +14,8 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
                           
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
 from caflow.models.modules.blocks.AffineInjector import AffineInjector
+from caflow.models.modules.blocks.ActNorm import ActNorm
+
 from caflow.models.modules.networks.CondGatedConvNet import CondGatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
@@ -42,6 +44,8 @@ class g_S(nn.Module):
 
         for _ in range(depth):
             #append activation layer
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+
             #append permutation layer
             self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
                                                             method = 'cayley', learnable=True))
@@ -74,6 +78,8 @@ class g_S(nn.Module):
                 #The InvertibleDownsampling and InvertibleChannelMixing Layers introduced by Christian et al. yield unit determinant
                 #This is why they do not contribute to the logdet summation.
                 h = layer(h)
+            elif isinstance(layer, ActNorm):
+                h, logdet = layer(h, logdet, reverse=False)
             else:
                 h, logdet = layer(h, logdet, reverse=False, cond_rv=[L, D])
         
@@ -83,6 +89,8 @@ class g_S(nn.Module):
         for layer in reversed(self.layers):
             if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
                 h = layer.inverse(h) #we are following the implementational change of InvertibleDownsampling and InvertibleChannelMixing
+            elif isinstance(layer, ActNorm):
+                h, logdet = layer(h, logdet, reverse=True)
             else:
                 h, logdet = layer(h, logdet, reverse=True, cond_rv=[L, D])
         
@@ -115,9 +123,9 @@ class g_I(nn.Module):
 
         for _ in range(depth):
             #append activation layer
-            #append permutation layer
-            #append the affine coupling layer
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
+            #append permutation layer
             self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
                                                             method = 'cayley', learnable=True))
 
@@ -149,6 +157,8 @@ class g_I(nn.Module):
                 #The InvertibleDownsampling and InvertibleChannelMixing Layers introduced by Christian et al. yield unit determinant
                 #This is why they do not contribute to the logdet summation.
                 h = layer(h)
+            elif isinstance(layer, ActNorm):
+                h, logdet = layer(h, logdet, reverse=False)
             else:
                 h, logdet = layer(h, logdet, reverse=False, cond_rv=[D])
         
@@ -158,6 +168,8 @@ class g_I(nn.Module):
         for layer in reversed(self.layers):
             if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
                 h = layer.inverse(h) #we are following the implementational change of InvertibleDownsampling and InvertibleChannelMixing
+            elif isinstance(layer, ActNorm):
+                h, logdet = layer(h, logdet, reverse=True)
             else:
                 h, logdet = layer(h, logdet, reverse=True, cond_rv=[D])
         
