@@ -92,25 +92,21 @@ class CAFlow(pl.LightningModule):
         loss = neg_avg_scaled_logjoint
         
         #logging
-        #self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
     def training_step_end(self, training_step_outputs):
         return training_step_outputs.sum()
     
     def validation_step(self, batch, batch_idx):
-        metric_dict = {}
-        
         Y, I = batch
         neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.val_shortcut, scaled=True))
         val_loss = neg_avg_scaled_logjoint
         self.log('val_loss', val_loss, on_step=True, on_epoch=True, sync_dist=True)
-        #metric_dict['val_loss'] = val_loss
         
         I_sample =  self.sample(Y, shortcut=self.val_shortcut)
         val_rec_loss = torch.mean(torch.abs(I-I_sample))
         self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
-        #metric_dict['val_rec_loss'] = val_rec_loss
         
         B = I.shape[0]
         if batch_idx==0:
@@ -139,86 +135,10 @@ class CAFlow(pl.LightningModule):
             )
             str_title = 'val_samples_epoch_%d__batch_%d' % (self.current_epoch, batch_idx)
             self.logger.experiment.add_image(str_title, grid, self.current_epoch)
-        
-      #return metric_dict
-
-    """       
-    def validation_epoch_end(self, outputs):
-        print_dict = {}
-        for output in outputs:
-            for key in output.keys():
-                if key not in print_dict:
-                    print_dict[key]=[]
-                    
-                print_dict[key].append(output[key])
-        
-        print('------- current epoch: %d -------' % self.current_epoch)
-        for key in print_dict.keys():
-            print_dict[key] = torch.mean(torch.tensor(print_dict[key])).item()
-            print('%s : %.12f' % (key, print_dict[key]))
-        
-        self.log_dict(print_dict)
-            
-       
-    def test_step(self, batch, batch_idx):
-        Y, I = batch
-        neg_avg_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.val_shortcut))
-        loss = neg_avg_logjoint
-        
-        I_sample =  self.sample(Y)
-        test_rec_loss = torch.mean(torch.abs(I-I_sample))
-        
-        B = I.shape[0]
-        raw_length = 1+self.num_val_samples+1
-        all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
-    
-        for i in range(B):
-            all_images[i*raw_length] = Y[i]
-            all_images[(i+1)*raw_length-1] = I[i]
-            
-        # generate images
-        with torch.no_grad():
-            for j in range(1, self.num_val_samples+1):
-                sampled_image = self(Y)
-                for i in range(B):
-                    all_images[i*raw_length+j]=sampled_image[i]
-           
-        grid = torchvision.utils.make_grid(
-            tensor=all_images,
-            nrow = raw_length, #Number of images displayed in each row of the grid
-            padding=self.sample_padding,
-            normalize=self.sample_normalize,
-            range=self.sample_norm_range,
-            scale_each=self.sample_scale_each,
-            pad_value=self.sample_pad_value,
-            )
-        
-        torchvision.utils.save_image(tensor=grid, fp='lightning_logs/version_7/%d.png' % batch_idx)
-        
-        metric_dict = {'test_loss': loss, 'test_rec_loss': test_rec_loss}
-        self.log_dict(metric_dict)
-        return metric_dict
-        
-    def test_epoch_end(self, outputs):
-        print_dict = {}
-        for output in outputs:
-            for key in output.keys():
-                if key not in print_dict:
-                    print_dict[key]=[]
-                    
-                print_dict[key].append(output[key])
-        
-        print('----')
-        for key in print_dict.keys():
-            print_dict[key] = torch.mean(torch.tensor(print_dict[key])).item()
-            print('%s : %.3f' % (key, print_dict[key]))
-        
-        self.log_dict(print_dict)
-    """
 
     def configure_optimizers(self,):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.99)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.999)
         return [optimizer], [scheduler]
     
     #@torch.no_grad()
