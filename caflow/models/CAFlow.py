@@ -34,7 +34,6 @@ class CAFlow(pl.LightningModule):
         self.scales = opts.model_scales
         self.channels = opts.data_channels
         
-        
         #validation conditional sampling settings
         self.num_val_samples = opts.num_val_samples #num of validation samples
         self.sample_padding = opts.sample_padding #bool

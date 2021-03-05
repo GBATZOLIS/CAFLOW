@@ -10,6 +10,8 @@ import torch.nn as nn
 from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D, \
                           InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
+from caflow.models.modules.blocks.ActNorm import ActNorm
+
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
@@ -38,17 +40,18 @@ class FlowBlock(nn.Module):
 
         for _ in range(depth):
             #append activation layer
-            #append permutation layer
-            #append the affine coupling layer
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
+            #append permutation layer
             self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
                                                             method = 'cayley', learnable=True))
 
+            #append the affine coupling layer
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
                                                    dim=dim, mask_info={'mask_type':'channel', 'invert':False},
                                                    network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
-                                                                   c_hidden=2*transformed_channels, 
-                                                                   c_out=-1, num_layers=1)))
+                                                                         c_hidden=2*transformed_channels, 
+                                                                         c_out=-1, num_layers=1)))
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
