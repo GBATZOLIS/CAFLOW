@@ -92,20 +92,25 @@ class CAFlow(pl.LightningModule):
         loss = neg_avg_scaled_logjoint
         
         #logging
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        #self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
+    def training_step_end(self, training_step_outputs):
+        return training_step_outputs.sum()
     
     def validation_step(self, batch, batch_idx):
         metric_dict = {}
         
         Y, I = batch
         neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.val_shortcut, scaled=True))
-        loss = neg_avg_scaled_logjoint
-        metric_dict['val_loss'] = loss
+        val_loss = neg_avg_scaled_logjoint
+        self.log('val_loss', val_loss, on_step=True, on_epoch=True, sync_dist=True)
+        #metric_dict['val_loss'] = val_loss
         
         I_sample =  self.sample(Y, shortcut=self.val_shortcut)
-        metric_dict['val_rec_loss'] = torch.mean(torch.abs(I-I_sample))
+        val_rec_loss = torch.mean(torch.abs(I-I_sample))
+        self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
+        #metric_dict['val_rec_loss'] = val_rec_loss
         
         B = I.shape[0]
         if batch_idx==0:
@@ -135,8 +140,9 @@ class CAFlow(pl.LightningModule):
             str_title = 'val_samples_epoch_%d__batch_%d' % (self.current_epoch, batch_idx)
             self.logger.experiment.add_image(str_title, grid, self.current_epoch)
         
-        return metric_dict
-            
+      #return metric_dict
+
+    """       
     def validation_epoch_end(self, outputs):
         print_dict = {}
         for output in outputs:
@@ -208,7 +214,8 @@ class CAFlow(pl.LightningModule):
             print('%s : %.3f' % (key, print_dict[key]))
         
         self.log_dict(print_dict)
-        
+    """
+
     def configure_optimizers(self,):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.99)
@@ -218,14 +225,14 @@ class CAFlow(pl.LightningModule):
     def sample(self, Y, shortcut=True, xtreme_shortcut=False):
         D, _, _ =self.model['rflow'](y=Y) #D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
 
-        #Use shape of D[0] to calculate dynamically the shapes of sampled tensors of the conditional flows.
+        #Use shape of D[0] to calculate dynamically the shapes of sampled tensors of the conditional flows. # this should be changed for super-resolution.
         #base_shape = D[0].shape #(batchsize, 2*(dim-1)*self.channels, init_res/2, init_res/2, init_res/2)
         batch_size = D[0].shape[0]
         init_res = D[0].shape[2:]
         init_channels = D[0].shape[1]
 
         if not shortcut and not xtreme_shortcut:
-            z_normal = self.generate_z_cond(batch_size, init_res, init_channels, shortcut=False)
+            z_normal = self.generate_z_cond(D[0], shortcut=False)
             if self.shared:
                 L_pred, _ = self.model['SharedConditionalFlow'](L=[], z=z_normal, D=D, reverse=True, shortcut=False)
             else:
@@ -234,42 +241,19 @@ class CAFlow(pl.LightningModule):
             return I_sample
 
         elif shortcut and not xtreme_shortcut:
-            z_short = self.generate_z_cond(batch_size, init_res, init_channels, shortcut=True)
+            z_short = self.generate_z_cond(D[0], shortcut=True)
             L_pred_short, _ = self.model['SharedConditionalFlow'](L=[], z=z_short, D=D, reverse=True, shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             return I_sample
         
         elif shortcut and xtreme_shortcut:
-            z_I = []
-            z_S = []
-            for scale in range(self.scales):
-                if scale < self.scales-1:
-                    right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
-                    crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
-                    if scale == 0:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
-                    else:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
-                        concat_z_S = self.prior.sample(sample_shape=crop_left_shape).to(self.device)
-                        z_S.append(concat_z_S)
-                        
-                elif scale == self.scales-1: #last scale
-                    right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
-                    crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).to(self.device))
-
-                    right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
-                    crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
-                    concat_z_S = self.prior.sample(sample_shape=crop_left_shape_S).to(self.device)
-                    z_S.append(concat_z_S)
-            
-            z_xtreme_short = [z_I, z_S]
+            z_xtreme_short = self.generate_z_cond(D[0], shortcut=True, xtreme_shortcut=True)
             L_pred_short, _ = self.model['SharedConditionalFlow'](L=[], z=z_xtreme_short, D=D, reverse=True, shortcut=True, xtreme_shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             
             return I_sample
 
-    def generate_z_cond(self, batch_size, init_res, init_channels, shortcut):
+    def generate_z_cond(self, D0, shortcut, xtreme_shortcut=False):
         """Generates the sampled tensors for the conditional flows"""
         # D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
         # The sampled tensors for the shared conditional flows are the following:
@@ -279,35 +263,66 @@ class CAFlow(pl.LightningModule):
         # This function creates the sampled tensors for the shortcut option. 
         # We provide the option to convert the shortcut version to the normal version using shortcut=False.
 
+        #Use shape of D[0] to calculate dynamically the shapes of sampled tensors of the conditional flows.
+        #base_shape = D[0].shape #(batchsize, 2*(dim-1)*self.channels, init_res/2, init_res/2, init_res/2)
+        batch_size = D0.shape[0] #D0 is D_(n-1): the first element of the list of tensors D.
+        init_res = D0.shape[2:]
+        init_channels = D0.shape[1]
+
         z_I = []
         z_S = []
-        for scale in range(self.scales):
-            if scale < self.scales-1:
-                right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
-                crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
-                if scale == 0:
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
-                else:
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape).to(self.device))
-                    concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:]).to(self.device)
+        if xtreme_shortcut:
+            for scale in range(self.scales):
+                if scale < self.scales-1:
+                    right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
+                    if scale == 0:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                    else:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        concat_z_S = self.prior.sample(sample_shape=crop_left_shape).type_as(D0)
+                        z_S.append(concat_z_S)
+                        
+                elif scale == self.scales-1: #last scale
+                    right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
+                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
+
+                    right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
+                    concat_z_S = self.prior.sample(sample_shape=crop_left_shape_S).type_as(D0)
                     z_S.append(concat_z_S)
-                    
-            elif scale == self.scales-1: #last scale
-                right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
-                crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
-                z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).to(self.device))
-
-                right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
-                crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
-                concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:]).to(self.device)
-                z_S.append(concat_z_S)
             
-        z_short = [z_I, z_S]
-
-        if shortcut:
-            return z_short
+            z_xtreme_short = [z_I, z_S]
+            return z_xtreme_short
         else:
-            return self.convert_shortcut_to_normal(z_short)
+            for scale in range(self.scales):
+                if scale < self.scales-1:
+                    right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
+                    if scale == 0:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                    else:
+                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:]).type_as(D0)
+                        z_S.append(concat_z_S)
+                        
+                elif scale == self.scales-1: #last scale
+                    right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
+                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
+
+                    right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
+                    crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
+                    concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:]).type_as(D0)
+                    z_S.append(concat_z_S)
+            
+            z_short = [z_I, z_S]
+        
+            if shortcut:
+                return z_short
+            else:
+                return self.convert_shortcut_to_normal(z_short)
 
     def convert_shortcut_to_normal(self, z_short):
         z_I = z_short[0]
