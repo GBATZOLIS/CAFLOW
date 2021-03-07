@@ -29,7 +29,7 @@ class SimpleConvNet(nn.Module):
         layers = nn.ModuleList()
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
         for layer_index in range(num_layers):
-            layers += [conv(c_hidden, c_hidden, kernel_size=1),
+            layers += [conv(c_hidden, c_hidden, kernel_size=3, padding=1),
                        nn.ReLU(inplace=False)]
             
         layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]

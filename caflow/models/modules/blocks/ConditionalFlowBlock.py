@@ -51,10 +51,10 @@ class g_S(nn.Module):
                                                             method = 'cayley', learnable=True))
             
             #AFFINE INJECTOR
-            self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-                                              network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
-                                                                layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
+            #self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
+            #                                  network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
+            #                                                    c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+            #                                                    layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
@@ -130,10 +130,10 @@ class g_I(nn.Module):
                                                             method = 'cayley', learnable=True))
 
             #AFFINE INJECTOR
-            self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-                                              network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
-                                                                layer_type='injector', num_cond_rvs=1)))
+            #self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
+            #                                  network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
+            #                                                    c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+            #                                                    layer_type='injector', num_cond_rvs=1)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 

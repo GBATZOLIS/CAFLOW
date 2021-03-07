@@ -53,7 +53,7 @@ class CondSimpleConvNet(nn.Module):
             
         layers += [conv(input_channels, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
         for layer_index in range(num_layers):
-            layers += [conv(c_hidden, c_hidden, kernel_size=1),
+            layers += [conv(c_hidden, c_hidden, kernel_size=3, padding=1),
                        nn.ReLU(inplace=False)]
             
         layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
