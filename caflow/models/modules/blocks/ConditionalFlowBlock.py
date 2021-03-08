@@ -15,6 +15,7 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
 from caflow.models.modules.blocks.AffineInjector import AffineInjector
 from caflow.models.modules.blocks.ActNorm import ActNorm
+from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 
 from caflow.models.modules.networks.CondGatedConvNet import CondGatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
@@ -35,26 +36,33 @@ class g_S(nn.Module):
         self.InvertibleDownsampling = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1]
         self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
         #print(channels)
-        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=True))
+        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
         
         transformed_channels = 2**dim*channels
 
+        #transition step
+        for _ in range(1):
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+
         for _ in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+            
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
             
             #AFFINE INJECTOR
-            #self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-            #                                  network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-            #                                                    c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
-            #                                                    layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
+            self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
+                                              network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
+                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+                                                                layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
@@ -78,7 +86,7 @@ class g_S(nn.Module):
                 #The InvertibleDownsampling and InvertibleChannelMixing Layers introduced by Christian et al. yield unit determinant
                 #This is why they do not contribute to the logdet summation.
                 h = layer(h)
-            elif isinstance(layer, ActNorm):
+            elif isinstance(layer, ActNorm) or isinstance(layer, InvertibleConv1x1):
                 h, logdet = layer(h, logdet, reverse=False)
             else:
                 h, logdet = layer(h, logdet, reverse=False, cond_rv=[L, D])
@@ -89,7 +97,7 @@ class g_S(nn.Module):
         for layer in reversed(self.layers):
             if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
                 h = layer.inverse(h) #we are following the implementational change of InvertibleDownsampling and InvertibleChannelMixing
-            elif isinstance(layer, ActNorm):
+            elif isinstance(layer, ActNorm) or isinstance(layer, InvertibleConv1x1):
                 h, logdet = layer(h, logdet, reverse=True)
             else:
                 h, logdet = layer(h, logdet, reverse=True, cond_rv=[L, D])
@@ -114,26 +122,34 @@ class g_I(nn.Module):
         self.InvertibleDownsampling = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1]
         self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
         
-        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=True))
+        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
         
         transformed_channels = 2**dim*channels
 
+        #transition step
+        for _ in range(1):
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+
         for _ in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
+            
 
             #AFFINE INJECTOR
-            #self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
-            #                                  network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-            #                                                    c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
-            #                                                    layer_type='injector', num_cond_rvs=1)))
+            self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
+                                              network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
+                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+                                                                layer_type='injector', num_cond_rvs=1)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
@@ -157,7 +173,7 @@ class g_I(nn.Module):
                 #The InvertibleDownsampling and InvertibleChannelMixing Layers introduced by Christian et al. yield unit determinant
                 #This is why they do not contribute to the logdet summation.
                 h = layer(h)
-            elif isinstance(layer, ActNorm):
+            elif isinstance(layer, ActNorm) or isinstance(layer, InvertibleConv1x1):
                 h, logdet = layer(h, logdet, reverse=False)
             else:
                 h, logdet = layer(h, logdet, reverse=False, cond_rv=[D])
@@ -168,7 +184,7 @@ class g_I(nn.Module):
         for layer in reversed(self.layers):
             if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
                 h = layer.inverse(h) #we are following the implementational change of InvertibleDownsampling and InvertibleChannelMixing
-            elif isinstance(layer, ActNorm):
+            elif isinstance(layer, ActNorm) or isinstance(layer, InvertibleConv1x1):
                 h, logdet = layer(h, logdet, reverse=True)
             else:
                 h, logdet = layer(h, logdet, reverse=True, cond_rv=[D])

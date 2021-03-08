@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
     #The following arguments are used for conditional image sampling in the validation process
-    parser.add_argument('--num-val-samples', type=int, default=4, help='num of samples to generate in validation')
+    parser.add_argument('--num-val-samples', type=int, default=6, help='num of samples to generate in validation')
     parser.add_argument('--sample-padding', type=int, default=2, help='Amount of padding' )
     parser.add_argument('--sample-normalize', default=True, action='store_false', help='If True, shift the image to the range (0, 1), by the min and max values specified by range. Default: False' )
     parser.add_argument('--sample-norm-range', type=tuple, default=(0, 255), help='Tuple (min, max) where min and max are numbers, then these numbers are used to normalize the image. \
@@ -76,8 +76,8 @@ if __name__ == '__main__':
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
-    parser.add_argument('--train-batch', type=int, default=4, help='train batch size')
-    parser.add_argument('--val-batch', type=int, default=4, help='val batch size')
+    parser.add_argument('--train-batch', type=int, default=128, help='train batch size')
+    parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
     parser.add_argument('--train-workers', type=int, default=4, help='train_workers')
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     

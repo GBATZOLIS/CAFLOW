@@ -11,6 +11,7 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
                           InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
 from caflow.models.modules.blocks.ActNorm import ActNorm
+from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
@@ -31,20 +32,27 @@ class FlowBlock(nn.Module):
         self.InvertibleDownsampling = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1]
         self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
         
-        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=True))
+        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
         
         transformed_channels = 2**dim*channels
 
+        #transition step
+        for _ in range(2):
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+
         for _ in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
 
             #append the affine coupling layer
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
