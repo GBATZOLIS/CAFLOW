@@ -38,17 +38,22 @@ class FlowBlock(nn.Module):
         
         transformed_channels = 2**dim*channels
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
 
             #append the affine coupling layer
+            if i%2 == 1:
+                invert = True
+            else:
+                invert = False
+
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
-                                                   dim=dim, mask_info={'mask_type':'channel', 'invert':False},
+                                                   dim=dim, mask_info={'mask_type':'channel', 'invert':invert},
                                                    network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
                                                                          c_hidden=2*transformed_channels, 
                                                                          c_out=-1, num_layers=1)))

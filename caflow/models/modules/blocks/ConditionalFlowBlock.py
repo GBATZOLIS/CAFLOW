@@ -42,23 +42,28 @@ class g_S(nn.Module):
         
         transformed_channels = 2**dim*channels
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
-            
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
+                
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
                                               network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
                                                                 c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
             
+            if i%2==1:
+                invert = True
+            else:
+                invert = False
+
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
-                                                   mask_info={'mask_type':'channel', 'invert':False},
+                                                   mask_info={'mask_type':'channel', 'invert':invert},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
                                                                      c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=2, last_scale=last_scale)))
@@ -121,13 +126,13 @@ class g_I(nn.Module):
         
         transformed_channels = 2**dim*channels
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
             #append permutation layer
-            self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
-                                                            method = 'cayley', learnable=True))
+            #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
+            #                                                method = 'cayley', learnable=True))
 
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
@@ -135,9 +140,14 @@ class g_I(nn.Module):
                                                                 c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=1)))
             
+            if i%2==1:
+                invert = True
+            else:
+                invert = False
+
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
-                                                   mask_info={'mask_type':'channel', 'invert':False},
+                                                   mask_info={'mask_type':'channel', 'invert':invert},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
                                                                      c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=1)))
