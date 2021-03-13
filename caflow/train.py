@@ -30,7 +30,7 @@ def main(hparams):
     model = CAFlow(hparams)
     trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                       accumulate_grad_batches=hparams.accumulate_grad_batches, \
-                      resume_from_checkpoint=hparams.resume_from_checkpoint)
+                      resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps)
     trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
@@ -43,8 +43,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
-    #parser.add_argument('--auto_scale_batch_size', type=str, default=None, help='Automatically tries to find the largest batch size that fits into memory, before any training.')
-    #parser.add_argument('--auto_lr_find', type=bool, default=False, help='Using Lightning’s built-in LR finder.') #do not use it for the time being. Needs to be investigated further.
+    # -> Stop criteria
+    parser.add_argument('--max-steps', type=int, default=200000) #1
 
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
