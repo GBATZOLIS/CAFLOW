@@ -30,7 +30,7 @@ def main(hparams):
     model = CAFlow(hparams)
     trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                       accumulate_grad_batches=hparams.accumulate_grad_batches, \
-                      resume_from_checkpoint=hparams.resume_from_checkpoint)
+                      resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps)
     trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
