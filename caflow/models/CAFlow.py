@@ -44,9 +44,9 @@ class CAFlow(pl.LightningModule):
 
         self.model = nn.ModuleDict()
         self.model['rflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.rflow_scale_depth, quants=opts.r_quants)
+                                                scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
         self.model['tflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.tflow_scale_depth, quants=opts.t_quants)
+                                                scale_depth=opts.tflow_scale_depth, quants=opts.t_quants, vardeq_depth=opts.vardeq_depth)
         print('opts.shared : ', opts.shared)
         if opts.shared:
             print('Shared Conditional Flow is used.')

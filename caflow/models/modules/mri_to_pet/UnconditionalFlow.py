@@ -9,10 +9,10 @@ Created on Tue Jan 19 22:02:53 2021
 import torch.nn as nn
 import torch
 from caflow.models.modules.blocks.FlowBlock import FlowBlock                    
-from caflow.models.modules.blocks.Dequantisation import Dequantisation
+from caflow.models.modules.blocks.Dequantisation import Dequantisation, VariationalDequantization
 
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth, quants):
+    def __init__(self, channels, dim, scales, scale_depth, quants, vardeq_depth):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -20,8 +20,12 @@ class UnconditionalFlow(nn.Module):
         self.scales = scales
         
         self.scale_blocks = nn.ModuleList()
-        self.scale_blocks.append(Dequantisation(dim=dim, quants=quants))#next step is to add option for variational dequantisation
-        
+
+        if vardeq_depth is None:
+            self.scale_blocks.append(Dequantisation(dim=dim, quants=quants))
+        else:
+            self.scale_blocks.append(VariationalDequantization(channels=channels, depth=vardeq_depth, dim=dim, quants=quants))
+
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,

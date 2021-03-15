@@ -44,7 +44,7 @@ class FlowBlock(nn.Module):
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
             self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
@@ -56,7 +56,7 @@ class FlowBlock(nn.Module):
 
             #append the affine coupling layer
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
-                                                   dim=dim, mask_info={'mask_type':'channel', 'invert':False},
+                                                   dim=dim, mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
                                                                          c_hidden=2*transformed_channels, 
                                                                          c_out=-1, num_layers=1)))

@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=2, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=2, help='shared conditional unshared scale depth')
     
-
+    parser.add_argument('--vardeq-depth', default=8, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     

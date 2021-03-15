@@ -57,7 +57,7 @@ class AffineCouplingLayer(nn.Module):
             infered_shape = tuple([1,c_in]+[1 for i in range(self.dim)])
             mask = mask.view(infered_shape)
             
-            if kwargs.get('invert')==True:
+            if kwargs.get('invert') == True:
                 mask = 1 - mask
                 
             return mask

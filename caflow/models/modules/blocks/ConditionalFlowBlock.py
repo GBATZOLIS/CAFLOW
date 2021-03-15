@@ -48,7 +48,7 @@ class g_S(nn.Module):
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
             self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
@@ -66,7 +66,7 @@ class g_S(nn.Module):
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
-                                                   mask_info={'mask_type':'channel', 'invert':False},
+                                                   mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
                                                                      c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=2, last_scale=last_scale)))
@@ -134,7 +134,7 @@ class g_I(nn.Module):
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
             self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
 
-        for _ in range(depth):
+        for i in range(depth):
             #append activation layer
             self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
 
@@ -153,7 +153,7 @@ class g_I(nn.Module):
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
-                                                   mask_info={'mask_type':'channel', 'invert':False},
+                                                   mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
                                                                      c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=1)))
