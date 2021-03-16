@@ -102,7 +102,7 @@ class GatedConv(nn.Module):
 
 class GatedConvNet(nn.Module):
 
-    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=3):
+    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=1):
         """
         Module that summarizes the previous blocks to a full convolutional neural network.
         Inputs:

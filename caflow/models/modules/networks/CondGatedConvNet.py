@@ -39,7 +39,7 @@ from caflow.models.modules.networks.GatedConvNet import ConcatELU, LayerNormChan
 
 class CondGatedConvNet(nn.Module):
 
-    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=2, layer_type='coupling', num_cond_rvs=2 , last_scale=False):
+    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=1, layer_type='coupling', num_cond_rvs=2 , last_scale=False, interpolation=True):
         """
         Module that summarizes the previous blocks to a full convolutional neural network.
         Inputs:
@@ -55,14 +55,15 @@ class CondGatedConvNet(nn.Module):
         c_out = c_out if c_out > 0 else 2 * c_in
     
         #reshape conditional rvs to the same shape as z using convolution
-        self.interpolate_layers = nn.ModuleList()
-        for i in range(num_cond_rvs):
-            if not last_scale:
-                self.interpolate_layers.append(conv(in_channels=c_in//2**dim, out_channels=c_in, 
-                                                    kernel_size = 4, stride = 2, padding = 1, dilation = 1))
-            else:
-                self.interpolate_layers.append(conv(in_channels=c_in//2**(dim-1), out_channels=c_in, 
-                                                    kernel_size = 4, stride = 2, padding = 1, dilation = 1))
+        if self.interpolation:
+            self.interpolate_layers = nn.ModuleList()
+            for i in range(num_cond_rvs):
+                if not last_scale:
+                    self.interpolate_layers.append(conv(in_channels=c_in//2**dim, out_channels=c_in, 
+                                                        kernel_size = 4, stride = 2, padding = 1, dilation = 1))
+                else:
+                    self.interpolate_layers.append(conv(in_channels=c_in//2**(dim-1), out_channels=c_in, 
+                                                        kernel_size = 4, stride = 2, padding = 1, dilation = 1))
                     
             
         
@@ -88,10 +89,13 @@ class CondGatedConvNet(nn.Module):
         self.nn[-1].bias.data.zero_()
         
     def forward(self, z=None, cond_rv=[]):
-        interpolated_cond_rvs = []
-        for i, rv in enumerate(cond_rv):
-            interpolated_cond_rvs.append(self.interpolate_layers[i](rv))
-        
+        if self.interpolation:
+            interpolated_cond_rvs = []
+            for i, rv in enumerate(cond_rv):
+                interpolated_cond_rvs.append(self.interpolate_layers[i](rv))
+        else:
+            interpolated_cond_rvs = cond_rv
+
         if self.layer_type == 'injector':
             concat_pass = torch.cat(interpolated_cond_rvs, dim=1)
             output = self.nn(concat_pass) 

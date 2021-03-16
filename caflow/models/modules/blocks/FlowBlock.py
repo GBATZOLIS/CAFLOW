@@ -57,9 +57,9 @@ class FlowBlock(nn.Module):
             #append the affine coupling layer
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
                                                    dim=dim, mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
-                                                   network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
-                                                                         c_hidden=2*transformed_channels, 
-                                                                         c_out=-1, num_layers=1)))
+                                                   network=GatedConvNet(c_in=transformed_channels, dim=dim, 
+                                                                        c_hidden=2*transformed_channels, 
+                                                                        c_out=-1, num_layers=1)))
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
