@@ -24,7 +24,7 @@ def discretize(sample):
 
 class TemplateDataset(BaseDataset):
     """A template dataset class for you to implement custom datasets."""
-    def __init__(self,  opts, phase):
+    def __init__(self,  opts, phase, domain=None):
         """Initialize this dataset class.
 
         Parameters:
@@ -38,6 +38,9 @@ class TemplateDataset(BaseDataset):
         # save the option and dataset root
         BaseDataset.__init__(self, opts)
         
+        #set domain to the domain you want to sample from. If domain is set to N we get paired samples from all domains.
+        self.domain = domain
+
         # get the image paths of your dataset;
         self.image_paths = load_image_paths(opts.dataroot, phase)
 
@@ -48,27 +51,19 @@ class TemplateDataset(BaseDataset):
         self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):
-        """Return a data point and its metadata information.
-
-        Parameters:
-            index -- a random integer for data indexing
-
-        Returns:
-            a dictionary of data with their names. It usually contains the data itself and its metadata information.
-
-        Step 1: get a random image path: e.g., path = self.image_paths[index]
-        Step 2: load your data from the disk: e.g., image = Image.open(path).convert('RGB').
-        Step 3: convert your data to a PyTorch tensor. You can use helpder functions such as self.transform. e.g., data = self.transform(image)
-        Step 4: return a data point as a dictionary.
-        """
-
-        A_path = self.image_paths['A'][index]
-        B_path = self.image_paths['B'][index]
-        A = Image.open(A_path).convert('RGB')
-        B = Image.open(B_path).convert('RGB')
-        A_transformed = self.transform(A)
-        B_transformed = self.transform(B)
-        return A_transformed, B_transformed
+        if self.domain is None:
+            A_path = self.image_paths['A'][index]
+            B_path = self.image_paths['B'][index]
+            A = Image.open(A_path).convert('RGB')
+            B = Image.open(B_path).convert('RGB')
+            A_transformed = self.transform(A)
+            B_transformed = self.transform(B)
+            return A_transformed, B_transformed
+        else:
+            path = self.image_paths[self.domain][index]
+            img = Image.open(path).convert('RGB')
+            img_transformed = self.transform(img)
+            return img_transformed
         
     def __len__(self):
         """Return the total number of images."""

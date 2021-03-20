@@ -6,10 +6,10 @@ Created on Mon Feb  1 17:29:09 2021
 @author: gbatz97
 """
 
-
 from caflow.models.modules.mri_to_pet.UnconditionalFlow import UnconditionalFlow
 from caflow.models.modules.mri_to_pet.SharedConditionalFlow import SharedConditionalFlow
 from caflow.models.modules.mri_to_pet.UnsharedConditionalFlow import UnsharedConditionalFlow
+from caflow.models.UFlow import UFlow
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
@@ -43,24 +43,41 @@ class CAFlow(pl.LightningModule):
         self.sample_pad_value = opts.sample_pad_value #pad value
 
         self.model = nn.ModuleDict()
-        self.model['rflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
-        self.model['tflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
-                                                scale_depth=opts.tflow_scale_depth, quants=opts.t_quants, vardeq_depth=opts.vardeq_depth)
-        print('opts.shared : ', opts.shared)
+
+        if opts.pretrain == 'conditional':
+            assert opts.rflow_checkpoint is not None, 'opts.rflow_checkpoint is not set.'
+            assert opts.tflow_checkpoint is not None, 'opts.tflow_checkpoint is not set.'
+            assert opts.cflow_checkpoint is None, 'Conditional flow is pretrained. opts.cflow_checkpoint is set.'
+
+        if opts.rflow_checkpoint is not None:
+            self.model['rflow'] = UFlow.load_from_checkpoint(opts.rflow_checkpoint)
+        else:
+            self.model['rflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, 
+                                                    scales=opts.model_scales, scale_depth=opts.rflow_scale_depth, 
+                                                    quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
+        
+        if opts.tflow_checkpoint is not None:
+            self.model['tflow'] = UFlow.load_from_checkpoint(opts.tflow_checkpoint)
+        else:
+            self.model['tflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, 
+                                                    scales=opts.model_scales, scale_depth=opts.rflow_scale_depth, 
+                                                    quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
+
         if opts.shared:
-            print('Shared Conditional Flow is used.')
             self.model['SharedConditionalFlow'] = SharedConditionalFlow(channels=opts.data_channels, \
                                                                         dim=opts.data_dim, scales=opts.model_scales, \
                                                                         shared_scale_depth=opts.s_cond_s_scale_depth, \
                                                                         unshared_scale_depth=opts.s_cond_u_scale_depth)
         else:
-            print('Unshared Conditional Flow is used.')
             self.model['UnsharedConditionalFlow'] = UnsharedConditionalFlow(channels=opts.data_channels, \
                                                                             dim=opts.data_dim, \
                                                                             scales=opts.model_scales, \
                                                                             scale_depth=opts.u_cond_scale_depth)
+        if opts.pretrain == 'conditional':
+            self.model['rflow'].freeze()
+            self.model['tflow'].freeze()      
 
+        #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
         
         #optimiser settings

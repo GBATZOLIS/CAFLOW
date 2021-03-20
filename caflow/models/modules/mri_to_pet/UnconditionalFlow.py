@@ -43,7 +43,6 @@ class UnconditionalFlow(nn.Module):
         
         
     def forward(self, y=None, z=[], logprior=0., logdet=0., reverse=False):
-
         if reverse:
             #assert z is not None
             y_dec, logdet = self.decode(z, logdet=logdet)

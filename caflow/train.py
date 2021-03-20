@@ -13,29 +13,54 @@ from torch.utils.data import DataLoader
 from caflow.data.aligned_dataset import AlignedDataset
 from caflow.data.template_dataset import TemplateDataset
 from caflow.models.CAFlow import CAFlow
+from caflow.models.UFlow import UFlow
 from caflow.data.create_dataset import create_dataset
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping
+
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
 
-    train_dataset = TemplateDataset(hparams, phase='train')
-    train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
-                                  num_workers=hparams.train_workers)
-    
-    val_dataset = TemplateDataset(hparams, phase='val')
-    val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
-                                num_workers=hparams.val_workers)
-    
-    model = CAFlow(hparams)
-    trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
-                      accumulate_grad_batches=hparams.accumulate_grad_batches, \
-                      resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps)
-    trainer.fit(model, train_dataloader, val_dataloader)
+    if hparams.pretrain in ['A', 'B']:
+        train_dataset = TemplateDataset(hparams, phase='train', domain=hparams.pretrain)
+        train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
+                                      num_workers=hparams.train_workers)
+        val_dataset = TemplateDataset(hparams, phase='val', domain=hparams.pretrain)
+        val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
+                                    num_workers=hparams.val_workers)
+        model = UFlow(hparams)
+        trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
+                          accumulate_grad_batches=hparams.accumulate_grad_batches, \
+                          resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
+                          callbacks=[EarlyStopping('val_loss', patience=50)])
+        trainer.fit(model, train_dataloader, val_dataloader)
+        
+    else:
+        train_dataset = TemplateDataset(hparams, phase='train')
+        train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
+                                    num_workers=hparams.train_workers)
+        
+        val_dataset = TemplateDataset(hparams, phase='val')
+        val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
+                                    num_workers=hparams.val_workers)
+        
+        model = CAFlow(hparams)
+        trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
+                        accumulate_grad_batches=hparams.accumulate_grad_batches, \
+                        resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
+                        callbacks=[EarlyStopping('val_loss', patience=50)])
+        trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    
+
+    #pretraining settings
+    parser.add_argument('--pretrain', type=str, default='end-to-end', help='which part of the model to pretrain. Default: end-to-end')
+    parser.add_argument('--rflow-checkpoint', type=str, default=None)
+    parser.add_argument('--tflow-checkpoint', type=str, default=None)
+    parser.add_argument('--cflow-checkpoint', type=str, default=None)
+
     #Trainer arguments
     parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
     parser.add_argument('--gpus', default=None)
@@ -66,7 +91,8 @@ if __name__ == '__main__':
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
     #The following arguments are used for conditional image sampling in the validation process
-    parser.add_argument('--num-val-samples', type=int, default=6, help='num of samples to generate in validation')
+    parser.add_argument('--num-val-u-samples', type=int, default=64, help='num of samples to generate in validation - unconditional setting')
+    parser.add_argument('--num-val-samples', type=int, default=6, help='num of samples to generate in validation - conditional setting')
     parser.add_argument('--sample-padding', type=int, default=2, help='Amount of padding' )
     parser.add_argument('--sample-normalize', default=True, action='store_false', help='If True, shift the image to the range (0, 1), by the min and max values specified by range. Default: False' )
     parser.add_argument('--sample-norm-range', type=tuple, default=(0, 255), help='Tuple (min, max) where min and max are numbers, then these numbers are used to normalize the image. \
