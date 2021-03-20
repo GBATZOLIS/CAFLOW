@@ -52,16 +52,12 @@ class CAFlow(pl.LightningModule):
         if opts.rflow_checkpoint is not None:
             self.model['rflow'] = UFlow.load_from_checkpoint(opts.rflow_checkpoint)
         else:
-            self.model['rflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, 
-                                                    scales=opts.model_scales, scale_depth=opts.rflow_scale_depth, 
-                                                    quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
+            self.model['rflow'] = UFlow(opts)
         
         if opts.tflow_checkpoint is not None:
             self.model['tflow'] = UFlow.load_from_checkpoint(opts.tflow_checkpoint)
         else:
-            self.model['tflow'] = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, 
-                                                    scales=opts.model_scales, scale_depth=opts.rflow_scale_depth, 
-                                                    quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
+            self.model['tflow'] = UFlow(opts)
 
         if opts.shared:
             self.model['SharedConditionalFlow'] = SharedConditionalFlow(channels=opts.data_channels, \
