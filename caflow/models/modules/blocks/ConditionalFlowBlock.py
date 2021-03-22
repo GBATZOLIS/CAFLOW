@@ -61,14 +61,14 @@ class g_S(nn.Module):
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
                                               network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+                                                                c_hidden = transformed_channels//2, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=2, last_scale=last_scale)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
                                                    mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                     c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
+                                                                     c_hidden = 3*transformed_channels//4, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=2, last_scale=last_scale)))
             
     
@@ -148,14 +148,14 @@ class g_I(nn.Module):
             #AFFINE INJECTOR
             self.layers.append(AffineInjector(c_in=transformed_channels, dim=dim, 
                                               network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                c_hidden = 2*transformed_channels, c_out=-1, num_layers=1,
+                                                                c_hidden = transformed_channels, c_out=-1, num_layers=1,
                                                                 layer_type='injector', num_cond_rvs=1)))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingLayer(c_in = transformed_channels, dim=dim, 
                                                    mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network = CondSimpleConvNet(c_in = transformed_channels, dim=dim,
-                                                                     c_hidden = 3*transformed_channels, c_out=-1, num_layers=1,
+                                                                     c_hidden = 3*transformed_channels//2, c_out=-1, num_layers=1,
                                                                      layer_type='coupling', num_cond_rvs=1)))
             
     
