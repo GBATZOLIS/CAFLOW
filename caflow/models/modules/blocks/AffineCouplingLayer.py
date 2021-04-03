@@ -38,7 +38,7 @@ class AffineCouplingLayer(nn.Module):
         # This prevents sudden large output values for the scaling that can destabilize training.
         # To still allow scaling factors smaller or larger than -1 and 1 respectively, 
         # we have a learnable parameter per dimension, called scaling_factor
-        self.scaling_factor = nn.Parameter(torch.zeros(c_in)) #learnable scaling factor for each dimension
+        #self.scaling_factor = nn.Parameter(torch.zeros(c_in)) #learnable scaling factor for each dimension
 
         # Register mask as buffer as it is a tensor which is not a parameter,
         # but should be part of the modules state.
@@ -104,8 +104,9 @@ class AffineCouplingLayer(nn.Module):
 
         # Stabilize scaling output
         infer_shape = tuple([1,-1]+[1 for i in range(self.dim)])
-        s_fac = self.scaling_factor.exp().view(infer_shape)
-        s = torch.tanh(s / s_fac) * s_fac
+        #s_fac = self.scaling_factor.exp().view(infer_shape)
+        #s = torch.tanh(s / s_fac) * s_fac
+        s = 2*torch.tanh(s)
 
         # Mask outputs (only transform the second part)
         s = s * (1 - self.mask)
@@ -113,16 +114,12 @@ class AffineCouplingLayer(nn.Module):
 
         # Affine transformation
         if not reverse:
-            # Whether we first shift and then scale, or the other way round,
-            # is a design choice, and usually does not have a big impact
-            z = (z + t) * torch.exp(s)
-            #print('logdet.shape: ', logdet)
-            #print('s.shape: ', s.shape)
+            z = torch.exp(s) * z + t
+            #z = (z + t) * torch.exp(s)
             logdet += s.sum(dim=[i+1 for i in range(self.dim+1)]) #use self.dim+1 because we need to add over the channel dimension as well
         else:
-            z = (z * torch.exp(-s)) - t
-            #print(s.sum(dim=[i+1 for i in range(self.dim+1)]))
-            #print(logdet)
+            z = (z - t) * torch.exp(-s)
+            #z = (z * torch.exp(-s)) - t
             logdet -= s.sum(dim=[i+1 for i in range(self.dim+1)])
 
         return z, logdet

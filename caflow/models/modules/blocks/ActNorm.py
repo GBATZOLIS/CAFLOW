@@ -91,17 +91,17 @@ class ActNorm(nn.Module):
         if offset_mask is not None:
             logs_offset *= offset_mask
             bias_offset *= offset_mask
+            
         # no need to permute dims as old version
         if not reverse:
-            # center and scale
-
-            # self.input = input
-            input = self._center(input, reverse, bias_offset)
-            input, logdet = self._scale(input, logdet, reverse, logs_offset)
-        else:
             # scale and center
             input, logdet = self._scale(input, logdet, reverse, logs_offset)
             input = self._center(input, reverse, bias_offset)
+        else:
+            # center and scale
+            input = self._center(input, reverse, bias_offset)
+            input, logdet = self._scale(input, logdet, reverse, logs_offset)
+            
         return input, logdet
 
 def mean(tensor, dim=None, keepdim=False):

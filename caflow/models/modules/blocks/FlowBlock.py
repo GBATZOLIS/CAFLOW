@@ -46,10 +46,10 @@ class FlowBlock(nn.Module):
 
         for i in range(depth):
             #append activation layer
-            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))### -> modified
 
             #append permutation layer
-            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels)) ### -> we have not changed this one
 
             #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
             #                                                method = 'cayley', learnable=True))
@@ -59,7 +59,7 @@ class FlowBlock(nn.Module):
                                                    dim=dim, mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
                                                    network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
                                                                         c_hidden=2*transformed_channels, 
-                                                                        c_out=-1, num_layers=1)))
+                                                                        c_out=-1, num_layers=1)))### -> modified
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
