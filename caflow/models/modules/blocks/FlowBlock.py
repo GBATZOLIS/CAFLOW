@@ -40,16 +40,16 @@ class FlowBlock(nn.Module):
         transformed_channels = 2**dim*channels
 
         #transition step
-        for _ in range(2):
-            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
-            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+        #for _ in range(2):
+        #    self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
+        #    self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
 
         for i in range(depth):
             #append activation layer
-            self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))### -> modified
+            #self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))### -> modified
 
             #append permutation layer
-            self.layers.append(InvertibleConv1x1(num_channels = transformed_channels)) ### -> we have not changed this one
+            #self.layers.append(InvertibleConv1x1(num_channels = transformed_channels)) ### -> we have not changed this one
 
             #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
             #                                                method = 'cayley', learnable=True))
