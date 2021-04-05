@@ -73,9 +73,9 @@ class VariationalDequantization(Dequantisation):
         super().__init__(dim, quants, alpha)
         self.layers = nn.ModuleList()
         dims_in = [(channels,)+resolution]
-
         for i in range(depth):
-            self.layers.append(Fm.AllInOneBlock(dims_in=dims_in, \
+            self.layers.append(Fm.AllInOneBlock(dims_in=dims_in, 
+                                                dims_c=dims_in,
                                                 subnet_constructor=SimpleConvNet))
     def dequant(self, z, ldj):
         img = (z / (self.quants-1)) * 2 - 1 # We condition the flows on x, i.e. the original image
