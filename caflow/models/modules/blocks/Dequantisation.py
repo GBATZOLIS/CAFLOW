@@ -73,10 +73,8 @@ class VariationalDequantization(Dequantisation):
         super().__init__(dim, quants, alpha)
         self.layers = nn.ModuleList()
         dims_in = [(channels,)+resolution]
-        print(dims_in)
+        #print(dims_in)
         for i in range(depth):
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
-            self.layers.append(Fm.PermuteRandom(dims_in=dims_in))
             self.layers.append(Fm.GLOWCouplingBlock(dims_in=dims_in, \
                                                     subnet_constructor=SimpleConvNet, \
                                                     clamp_activation='TANH'))
