@@ -46,7 +46,6 @@ class UFlow(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         Y = batch
         scaled_logprob = self.logprob(Y, scaled=True)
-        print(scaled_logprob)
         loss = -1*torch.mean(scaled_logprob)
 
         #logging
