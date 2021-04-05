@@ -80,8 +80,8 @@ if __name__ == '__main__':
     parser.add_argument('--val-shortcut', default=True, action='store_false')
     
     parser.add_argument('--model-scales', type=int, default=4)
-    parser.add_argument('--rflow-scale-depth', type=int, default=8)
-    parser.add_argument('--tflow-scale-depth', type=int, default=8)
+    parser.add_argument('--rflow-scale-depth', type=int, default=16)
+    parser.add_argument('--tflow-scale-depth', type=int, default=16)
     parser.add_argument('--u-cond-scale-depth', type=int, default=4, help='unshared conditional scale depth')
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')

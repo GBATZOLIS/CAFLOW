@@ -50,8 +50,7 @@ class FlowBlock(nn.Module):
         dims_in = [(transformed_channels,)+transformed_resolution]
         for i in range(depth):
             self.layers.append(Fm.AllInOneBlock(dims_in=dims_in, \
-                                                subnet_constructor=SimpleConvNet, \
-                                                clamp_activation='TANH'))
+                                                subnet_constructor=SimpleConvNet))
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
