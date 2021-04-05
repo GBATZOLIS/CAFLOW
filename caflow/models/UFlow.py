@@ -23,7 +23,7 @@ class UFlow(pl.LightningModule):
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
 
-        self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, scales=opts.model_scales, 
+        self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, resolution=opts.load_size, scales=opts.model_scales, 
                                       scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
         
         #set the prior distribution for the latents
@@ -46,6 +46,7 @@ class UFlow(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         Y = batch
         scaled_logprob = self.logprob(Y, scaled=True)
+        print(scaled_logprob)
         loss = -1*torch.mean(scaled_logprob)
 
         #logging

@@ -1,120 +1,59 @@
-import torch
-from torch import nn as nn
+from FrEIA.modules import InvertibleModule
+
 import numpy as np
+import torch
+import torch.nn as nn
+from torch.nn.functional import conv2d, conv_transpose2d
 
-class ActNorm(nn.Module):
-    """
-    Activation Normalization
-    Initialize the bias and scale with a given minibatch,
-    so that the output per-channel have zero mean and unit variance for that.
-    After initialization, `bias` and `logs` will be trained as parameters.
-    """
 
-    def __init__(self, num_features, scale=1., dim=2):
-        super().__init__()
-        # register mean and scale
-        self.dim = dim
-        size = [1, num_features]+[1 for i in range(dim)]
-        self.register_parameter("bias", nn.Parameter(torch.zeros(*size)))
-        self.register_parameter("logs", nn.Parameter(torch.zeros(*size)))
-        self.num_features = num_features
-        self.scale = float(scale)
-        self.inited = False
+class ActNorm(InvertibleModule):
+    def __init__(self, dims_in, dims_c=None, init_data=None):
+        super().__init__(dims_in, dims_c)
+        self.dims_in = dims_in[0]
+        param_dims = [1, self.dims_in[0]] + [1 for i in range(len(self.dims_in) - 1)]
+        self.scale = nn.Parameter(torch.zeros(*param_dims))
+        self.bias = nn.Parameter(torch.zeros(*param_dims))
 
-    def _check_input_dim(self, input):
-        assert len(input.size()) == self.dim + 2
-        assert input.size(1) == self.num_features, (
-            "[ActNorm]: input should be in shape as `BCHW`,"
-            " channels should be {} rather than {}".format(
-                self.num_features, input.size(1)))
-
-    def initialize_parameters(self, input):
-        self._check_input_dim(input)
-        if not self.training:
-            return
-        if (self.bias != 0).any():
-            self.inited = True
-            return
-        assert input.device == self.bias.device, (input.device, self.bias.device)
-        with torch.no_grad():
-            dimensions = [0]+[i+1 for i in range(1, self.dim+1)]
-            bias = mean(input.clone(), dim=dimensions, keepdim=True) * -1.0
-            vars = mean((input.clone() + bias) ** 2, dim=dimensions, keepdim=True)
-            logs = torch.log(self.scale / (torch.sqrt(vars) + 1e-6))
-            self.bias.data.copy_(bias.data)
-            self.logs.data.copy_(logs.data)
-            self.inited = True
-
-    def _center(self, input, reverse=False, offset=None):
-        bias = self.bias
-
-        if offset is not None:
-            bias = bias + offset
-
-        if not reverse:
-            return input + bias
+        if init_data:
+            self.initialize_with_data(init_data)
         else:
-            return input - bias
+            self.init_on_next_batch = True
 
-    def _scale(self, input, logdet=None, reverse=False, offset=None):
-        logs = self.logs
+        def on_load_state_dict(*args):
+            # when this module is loading state dict, we SHOULDN'T init with data,
+            # because that will reset the trained parameters. Registering a hook
+            # that disable this initialisation.
+            self.init_on_next_batch = False
+        self._register_load_state_dict_pre_hook(on_load_state_dict)
 
-        if offset is not None:
-            logs = logs + offset
 
-        if not reverse:
-            input = input * torch.exp(logs) # should have shape batchsize, n_channels, 1, 1
-            # input = input * torch.exp(logs+logs_offset)
+    def initialize_with_data(self, data):
+        # Initialize to mean 0 and std 1 with sample batch
+        # 'data' expected to be of shape (batch, channels[, ...])
+        assert all([data.shape[i+1] == self.dims_in[i] for i in range(len(self.dims_in))]),\
+            "Can't initialize ActNorm layer, provided data don't match input dimensions."
+        self.scale.data.view(-1)[:] \
+            = torch.log(1 / data.transpose(0,1).contiguous().view(self.dims_in[0], -1).std(dim=-1))
+        data = data * self.scale.exp()
+        self.bias.data.view(-1)[:] \
+            = -data.transpose(0,1).contiguous().view(self.dims_in[0], -1).mean(dim=-1)
+        self.init_on_next_batch = False
+
+
+    def forward(self, x, rev=False, jac=True):
+        if self.init_on_next_batch:
+            self.initialize_with_data(x[0])
+
+        jac = (self.scale.sum() * np.prod(self.dims_in[1:])).repeat(x[0].shape[0])
+        if rev:
+            jac = -jac
+
+        if not rev:
+            return [x[0] * self.scale.exp() + self.bias], jac
         else:
-            input = input * torch.exp(-logs)
+            return [(x[0] - self.bias) / self.scale.exp()], jac
 
-        if logdet is not None:
-            """
-            logs is log_std of `mean of channels`
-            so we need to multiply pixels
-            """
-            
-            dlogdet = torch.sum(logs) * np.prod(input.shape[2:])
-            dlogdet = dlogdet.repeat((input.size(0)))
-            if reverse:
-                dlogdet *= -1
 
-            logdet = logdet + dlogdet
-        
-        return input, logdet
-
-    def forward(self, input, logdet=None, reverse=False, offset_mask=None, logs_offset=None, bias_offset=None):
-        if not self.inited:
-            self.initialize_parameters(input)
-        self._check_input_dim(input)
-
-        if offset_mask is not None:
-            logs_offset *= offset_mask
-            bias_offset *= offset_mask
-            
-        # no need to permute dims as old version
-        if not reverse:
-            # scale and center
-            input, logdet = self._scale(input, logdet, reverse, logs_offset)
-            input = self._center(input, reverse, bias_offset)
-        else:
-            # center and scale
-            input = self._center(input, reverse, bias_offset)
-            input, logdet = self._scale(input, logdet, reverse, logs_offset)
-            
-        return input, logdet
-
-def mean(tensor, dim=None, keepdim=False):
-    if dim is None:
-        # mean all dim
-        return torch.mean(tensor)
-    else:
-        if isinstance(dim, int):
-            dim = [dim]
-        dim = sorted(dim)
-        for d in dim:
-            tensor = tensor.mean(dim=d, keepdim=True)
-        if not keepdim:
-            for i, d in enumerate(dim):
-                tensor.squeeze_(d-i)
-        return tensor
+    def output_dims(self, input_dims):
+        assert len(input_dims) == 1, "Can only use 1 input"
+        return input_dims

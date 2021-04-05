@@ -11,8 +11,7 @@ import torch.nn as nn
 from torch.nn import Conv1d, Conv2d, Conv3d
 
 class SimpleConvNet(nn.Module):
-
-    def __init__(self, c_in, dim, c_hidden=32, c_out=-1, num_layers=1):
+    def __init__(self, c_in, c_out):
         """
         Module that summarizes the previous blocks to a full convolutional neural network.
         Inputs:
@@ -23,17 +22,15 @@ class SimpleConvNet(nn.Module):
         """
         super(SimpleConvNet, self).__init__()
         
-        conv = [Conv1d, Conv2d, Conv3d][dim-1] #select the appropriate conv layer based on the dimension of the input tensor
-        c_out = c_out if c_out > 0 else 2 * c_in
+        conv = Conv2d
+        c_hidden = 8 * c_in
         
         layers = nn.ModuleList()
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
-        for layer_index in range(num_layers):
+        for layer_index in range(1):
             layers += [conv(c_hidden, c_hidden, kernel_size=1),
                        nn.ReLU(inplace=False)]
-            
         layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
-        
         self.nn = nn.Sequential(*layers)
         
         #start the coupling layer as identity -> t=0, exp(s)=1

@@ -16,75 +16,90 @@ from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
+import FrEIA.modules as Fm
 
 class FlowBlock(nn.Module):
-    def __init__(self, channels, dim, depth):
+    def __init__(self, channels, dim, resolution, depth):
         super(FlowBlock, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
         self.channels = channels 
         self.dim = dim
+        self.resolution = resolution
         self.depth = depth
 
         self.layers = nn.ModuleList()
         
         #choose the correct invertible downsampling and channel mixining layers from the iUNETS library based on the dimension of the tensor
         self.InvertibleDownsampling = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1]
-        self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
-        
-        self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
+        #self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
+        #self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
+        self.layers.append(Fm.IRevNetDownsampling(dims_in=[(channels,)+resolution]))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
         
         transformed_channels = 2**dim*channels
+        transformed_resolution = tuple([x//2 for x in self.resolution])
 
         #transition step
         #for _ in range(2):
         #    self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
         #    self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
 
+        dims_in = [(transformed_channels,)+transformed_resolution]
         for i in range(depth):
+            self.layers.append(Fm.GLOWCouplingBlock(dims_in=dims_in, \
+                                                    subnet_constructor=SimpleConvNet, \
+                                                    clamp_activation='TANH'))
+            
             #append activation layer
+            #self.layers.append(ActNorm(dims_in=dims_in))
             #self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))### -> modified
 
             #append permutation layer
+            #self.layers.append(Fm.PermuteRandom(dims_in=dims_in))
             #self.layers.append(InvertibleConv1x1(num_channels = transformed_channels)) ### -> we have not changed this one
 
             #self.layers.append(self.InvertibleChannelMixing(in_channels = transformed_channels, 
             #                                                method = 'cayley', learnable=True))
+            
+            #self.layers.append(Fm.GLOWCouplingBlock(dims_in=dims_in, \
+            #                                        subnet_constructor=SimpleConvNet, \
+            #                                        clamp_activation='TANH'))
 
             #append the affine coupling layer
-            self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
-                                                   dim=dim, mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
-                                                   network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
-                                                                        c_hidden=2*transformed_channels, 
-                                                                        c_out=-1, num_layers=1)))### -> modified
+            #self.layers.append(AffineCouplingLayer(c_in = transformed_channels, 
+            #                                       dim=dim, mask_info={'mask_type':'channel', 'invert':True if i%2==0 else False},
+            #                                       network=SimpleConvNet(c_in=transformed_channels, dim=dim, 
+            #                                                            c_hidden=2*transformed_channels, 
+            #                                                            c_out=-1, num_layers=1)))### -> modified
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
             h_pass, logdet = self.decode(h, logdet)
         else:
             h_pass, logdet = self.encode(h, logdet)
-        
         return h_pass, logdet
     
     def encode(self, h, logdet):
+        h=(h,)
         for layer in self.layers:
-            if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
-                #The InvertibleDownsampling and InvertibleChannelMixing Layers introduced by Christian et al. yield unit determinant
-                #This is why they do not contribute to the logdet summation.
-                h = layer(h)
+            if isinstance(layer, self.InvertibleDownsampling):
+                h = layer(h[0])
+                h = (h,)
             else:
-                h, logdet = layer(h, logdet, reverse=False)
-        
-        return h, logdet
+                h, jac = layer(h, rev=False)
+                logdet += jac
+        return h[0], logdet
 
     def decode(self, h, logdet):
+        h=(h,)
         for layer in reversed(self.layers):
-            if isinstance(layer, self.InvertibleDownsampling) or isinstance(layer, self.InvertibleChannelMixing):
-                h = layer.inverse(h) #we are following the implementational change of InvertibleDownsampling and InvertibleChannelMixing
+            if isinstance(layer, self.InvertibleDownsampling):
+                h = layer.inverse(h[0])
+                h = (h,)
             else:
-                h, logdet = layer(h, logdet, reverse=True)
-        
-        return h, logdet
+                h, jac = layer(h, rev=True)
+                logdet += jac
+        return h[0], logdet

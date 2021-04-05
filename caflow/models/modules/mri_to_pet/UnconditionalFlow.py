@@ -12,11 +12,12 @@ from caflow.models.modules.blocks.FlowBlock import FlowBlock
 from caflow.models.modules.blocks.Dequantisation import Dequantisation, VariationalDequantization
 
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth, quants, vardeq_depth):
+    def __init__(self, channels, dim, resolution, scales, scale_depth, quants, vardeq_depth):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
         self.dim = dim
+        self.resolution = resolution
         self.scales = scales
         
         self.scale_blocks = nn.ModuleList()
@@ -24,17 +25,27 @@ class UnconditionalFlow(nn.Module):
         if vardeq_depth is None:
             self.scale_blocks.append(Dequantisation(dim=dim, quants=quants))
         else:
-            self.scale_blocks.append(VariationalDequantization(channels=channels, depth=vardeq_depth, dim=dim, quants=quants))
+            self.scale_blocks.append(VariationalDequantization(channels=channels, depth=vardeq_depth, dim=dim, \
+                                                resolution=self.calculate_resolution(dim, 0), quants=quants))
 
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
+            resolution = self.calculate_resolution(dim, scale)
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
+                                               resolution=resolution,
                                                depth = scale_depth))
 
         # Create prior distribution for final latent space
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
     
+    def calculate_resolution(self, dim, scale):
+        if isinstance(self.resolution, int):
+            resolution = tuple([self.resolution//2**scale for _ in range(self.dim)])
+        else:
+            resolution = tuple([x//2**scale for x in self.resolution])
+        return resolution
+
     def calculate_scale_channels(self, dim, scale):
         if scale==0:
             return  2 ** (dim * scale) * self.channels
