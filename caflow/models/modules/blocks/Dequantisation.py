@@ -10,9 +10,12 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 import numpy as np
-from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
+from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
+from caflow.models.modules.networks.nnflowpp import nnflowpp
+from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
+from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 import FrEIA.modules as Fm
 
 class Dequantisation(nn.Module):
@@ -64,7 +67,7 @@ class Dequantisation(nn.Module):
 
 class VariationalDequantization(Dequantisation):
 
-    def __init__(self, channels=3, depth=8, dim=2, resolution=(64,64), quants=256, alpha=1e-5):
+    def __init__(self, channels=3, depth=8, dim=2, resolution=(64,64), quants=256, alpha=1e-5, nn_settings=None):
         """
         Inputs:
             var_flows - A list of flow transformations to use for modeling q(u|x)
@@ -73,10 +76,13 @@ class VariationalDequantization(Dequantisation):
         super().__init__(dim, quants, alpha)
         self.layers = nn.ModuleList()
         dims_in = [(channels,)+resolution]
-        for i in range(depth):
-            self.layers.append(Fm.AllInOneBlock(dims_in=dims_in, 
-                                                dims_c=dims_in,
-                                                subnet_constructor=SimpleConvNet))
+        for _ in range(depth):
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
+                                                      dims_c=dims_in,
+                                                      subnet_constructor=parse_nn_by_name(nn_settings['nn_type']), 
+                                                      nn_settings=nn_settings))
     def dequant(self, z, ldj):
         img = (z / (self.quants-1)) * 2 - 1 # We condition the flows on x, i.e. the original image
 

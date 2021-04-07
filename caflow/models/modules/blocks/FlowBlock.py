@@ -9,17 +9,20 @@ Created on Sun Jan 24 17:24:21 2021
 import torch.nn as nn
 from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D, \
                           InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
-from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingLayer
+
 from caflow.models.modules.blocks.ActNorm import ActNorm
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
+from caflow.models.modules.networks.nnflowpp import nnflowpp
+from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 import FrEIA.modules as Fm
+from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
 
 class FlowBlock(nn.Module):
-    def __init__(self, channels, dim, resolution, depth):
+    def __init__(self, channels, dim, resolution, depth, nn_settings):
         super(FlowBlock, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
@@ -48,11 +51,12 @@ class FlowBlock(nn.Module):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
-        for i in range(depth):
+        for _ in range(depth):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             self.layers.append(InvertibleConv1x1(dims_in=dims_in))
-            self.layers.append(Fm.GLOWCouplingBlock(dims_in=dims_in, \
-                                                subnet_constructor=SimpleConvNet))
+            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, \
+                                                subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                nn_settings=nn_settings))
     
     def forward(self, h, logdet, reverse=False):
         if reverse:

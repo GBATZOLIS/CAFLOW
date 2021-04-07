@@ -12,7 +12,7 @@ from caflow.models.modules.blocks.FlowBlock import FlowBlock
 from caflow.models.modules.blocks.Dequantisation import Dequantisation, VariationalDequantization
 
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, resolution, scales, scale_depth, quants, vardeq_depth):
+    def __init__(self, channels, dim, resolution, scales, scale_depth, quants, vardeq_depth, nn_settings):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -26,7 +26,8 @@ class UnconditionalFlow(nn.Module):
             self.scale_blocks.append(Dequantisation(dim=dim, quants=quants))
         else:
             self.scale_blocks.append(VariationalDequantization(channels=channels, depth=vardeq_depth, dim=dim, \
-                                                resolution=self.calculate_resolution(dim, 0), quants=quants))
+                                                        resolution=self.calculate_resolution(dim, 0),\
+                                                        quants=quants, nn_settings=nn_settings))
 
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
@@ -34,7 +35,8 @@ class UnconditionalFlow(nn.Module):
             self.scale_blocks.append(FlowBlock(channels = scale_channels,
                                                dim = dim,
                                                resolution=resolution,
-                                               depth = scale_depth))
+                                               depth = scale_depth,
+                                               nn_settings=nn_settings))
 
         # Create prior distribution for final latent space
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)

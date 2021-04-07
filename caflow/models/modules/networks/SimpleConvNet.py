@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.nn import Conv1d, Conv2d, Conv3d
 
 class SimpleConvNet(nn.Module):
-    def __init__(self, c_in, c_out):
+    def __init__(self, c_in, c_out, c_hidden_factor):
         """
         Module that summarizes the previous blocks to a full convolutional neural network.
         Inputs:
@@ -23,7 +23,7 @@ class SimpleConvNet(nn.Module):
         super(SimpleConvNet, self).__init__()
         
         conv = Conv2d
-        c_hidden = 16 * c_in
+        c_hidden = c_hidden_factor * c_in
         
         layers = nn.ModuleList()
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]

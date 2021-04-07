@@ -80,8 +80,8 @@ if __name__ == '__main__':
     parser.add_argument('--val-shortcut', default=True, action='store_false')
     
     parser.add_argument('--model-scales', type=int, default=4)
-    parser.add_argument('--rflow-scale-depth', type=int, default=8)
-    parser.add_argument('--tflow-scale-depth', type=int, default=8)
+    parser.add_argument('--rflow-scale-depth', type=int, default=16)
+    parser.add_argument('--tflow-scale-depth', type=int, default=16)
     parser.add_argument('--u-cond-scale-depth', type=int, default=4, help='unshared conditional scale depth')
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')
@@ -89,6 +89,17 @@ if __name__ == '__main__':
     parser.add_argument('--vardeq-depth', type=int, default=None, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
+    
+    #Architecture (coupling layer type, NN which parameterises the coupling layer etc.)
+    parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers')
+    ##settings for the SimpleConvNet architecture
+    parser.add_argument('--c-hidden-factor', type=int, default=16, help='c_hidden=c_hidden_factor*in_channels')
+    ##->settings for the flow++ architecture
+    parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
+    parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
+    parser.add_argument('--num-components', default=32, type=int, help='Number of components in the mixture')
+    parser.add_argument('--num-channels-factor', default=8, type=int, help='Number of channels in Flow++')
+    parser.add_argument('--use-attn', default=False, type=bool, help='whether to use attention in the convolution blocks. Default=False.')
     
     #The following arguments are used for conditional image sampling in the validation process
     parser.add_argument('--num-val-u-samples', type=int, default=64, help='num of samples to generate in validation - unconditional setting')
@@ -108,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     
     #the rest are related to the specific dataset and the required transformations
-    parser.add_argument('--max-dataset-size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset. \
+    parser.add_argument('--max-dataset-size', type=int, default=500, help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--preprocess', default=['resize'])

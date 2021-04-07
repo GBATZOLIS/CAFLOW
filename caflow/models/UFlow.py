@@ -22,9 +22,12 @@ class UFlow(pl.LightningModule):
         self.sample_norm_range = opts.sample_norm_range #tuple range
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
-
+        nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.c_hidden_factor, \
+            'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
+            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
         self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, resolution=opts.load_size, scales=opts.model_scales, 
-                                      scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth)
+                                      scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth,
+                                      nn_settings=nn_settings)
         
         #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
@@ -93,5 +96,8 @@ class UFlow(pl.LightningModule):
     
     def configure_optimizers(self,):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.999)
+        #scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.999)
+        warm_up=200
+        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, lambda s: min(1., s / warm_up)),
+                    'interval': 'step'}  # called after each training step
         return [optimizer], [scheduler]

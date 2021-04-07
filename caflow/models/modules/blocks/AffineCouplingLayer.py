@@ -11,8 +11,193 @@ The main code for the CouplingLayer has been copied from a deep learning tutoria
 Tutorial: https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial11/NF_image_modeling.html
 """
 
+from typing import Callable, Union
 import torch
 import torch.nn as nn
+from FrEIA.modules import InvertibleModule 
+
+class _BaseCouplingBlock(InvertibleModule):
+    '''Base class to implement various coupling schemes.  It takes care of
+    checking the dimensions, conditions, clamping mechanism, etc.
+    Each child class only has to implement the _coupling1 and _coupling2 methods
+    for the left and right coupling operations.
+    (In some cases below, forward() is also overridden)
+    '''
+
+    def __init__(self, dims_in, dims_c=[],
+                 clamp: float = 2.,
+                 clamp_activation: Union[str, Callable] = "ATAN"):
+        '''
+        Additional args in docstring of base class.
+        Args:
+          clamp: Soft clamping for the multiplicative component. The
+            amplification or attenuation of each input dimension can be at most
+            exp(±clamp).
+          clamp_activation: Function to perform the clamping. String values
+            "ATAN", "TANH", and "SIGMOID" are recognized, or a function of
+            object can be passed. TANH behaves like the original realNVP paper.
+            A custom function should take tensors and map -inf to -1 and +inf to +1.
+        '''
+
+        super().__init__(dims_in, dims_c)
+
+        self.channels = dims_in[0][0]
+
+        # ndims means the rank of tensor strictly speaking.
+        # i.e. 1D, 2D, 3D tensor, etc.
+        self.ndims = len(dims_in[0])
+
+        self.split_len1 = self.channels // 2
+        self.split_len2 = self.channels - self.channels // 2
+
+        self.clamp = clamp
+
+        assert all([tuple(dims_c[i][1:]) == tuple(dims_in[0][1:]) for i in range(len(dims_c))]), \
+            "Dimensions of input and one or more conditions don't agree."
+        self.conditional = (len(dims_c) > 0)
+        self.condition_length = sum([dims_c[i][0] for i in range(len(dims_c))])
+
+        if isinstance(clamp_activation, str):
+            if clamp_activation == "ATAN":
+                self.f_clamp = (lambda u: 0.636 * torch.atan(u))
+            elif clamp_activation == "TANH":
+                self.f_clamp = torch.tanh
+            elif clamp_activation == "SIGMOID":
+                self.f_clamp = (lambda u: 2. * (torch.sigmoid(u) - 0.5))
+            else:
+                raise ValueError(f'Unknown clamp activation "{clamp_activation}"')
+        else:
+            self.f_clamp = clamp_activation
+
+    def forward(self, x, c=[], rev=False, jac=True):
+        '''See base class docstring'''
+
+        # notation:
+        # x1, x2: two halves of the input
+        # y1, y2: two halves of the output
+        # *_c: variable with condition concatenated
+        # j1, j2: Jacobians of the two coupling operations
+
+        x1, x2 = torch.split(x[0], [self.split_len1, self.split_len2], dim=1)
+
+        if not rev:
+            x2_c = torch.cat([x2, *c], 1) if self.conditional else x2
+            y1, j1 = self._coupling1(x1, x2_c)
+
+            y1_c = torch.cat([y1, *c], 1) if self.conditional else y1
+            y2, j2 = self._coupling2(x2, y1_c)
+        else:
+            # names of x and y are swapped for the reverse computation
+            x1_c = torch.cat([x1, *c], 1) if self.conditional else x1
+            y2, j2 = self._coupling2(x2, x1_c, rev=True)
+
+            y2_c = torch.cat([y2, *c], 1) if self.conditional else y2
+            y1, j1 = self._coupling1(x1, y2_c, rev=True)
+
+        return (torch.cat((y1, y2), 1),), j1 + j2
+
+    def _coupling1(self, x1, u2, rev=False):
+        '''The first/left coupling operation in a two-sided coupling block.
+        Args:
+          x1 (Tensor): the 'active' half being transformed.
+          u2 (Tensor): the 'passive' half, including the conditions, from
+            which the transformation is computed.
+        Returns:
+          y1 (Tensor): same shape as x1, the transformed 'active' half.
+          j1 (float or Tensor): the Jacobian, only has batch dimension.
+            If the Jacobian is zero of fixed, may also return float.
+        '''
+        raise NotImplementedError()
+
+    def _coupling2(self, x2, u1, rev=False):
+        '''The second/right coupling operation in a two-sided coupling block.
+        Args:
+          x2 (Tensor): the 'active' half being transformed.
+          u1 (Tensor): the 'passive' half, including the conditions, from
+            which the transformation is computed.
+        Returns:
+          y2 (Tensor): same shape as x1, the transformed 'active' half.
+          j2 (float or Tensor): the Jacobian, only has batch dimension.
+            If the Jacobian is zero of fixed, may also return float.
+        '''
+        raise NotImplementedError()
+
+    def output_dims(self, input_dims):
+        '''See base class for docstring'''
+        if len(input_dims) != 1:
+            raise ValueError("Can only use 1 input")
+        return input_dims
+
+class AffineCouplingOneSided(_BaseCouplingBlock):
+    '''Half of a coupling block following the GLOWCouplingBlock design.  This
+    means only one affine transformation on half the inputs.  In the case where
+    random permutations or orthogonal transforms are used after every block,
+    this is not a restriction and simplifies the design.  '''
+
+    def __init__(self, dims_in, dims_c=[],
+                    subnet_constructor: Callable = None,
+                    clamp: float = 2.,
+                    clamp_activation: Union[str, Callable] = "ATAN", nn_settings=None):
+        '''
+            Additional args in docstring of base class.
+            Args:
+            subnet_constructor: function or class, with signature
+                constructor(dims_in, dims_out).  The result should be a torch
+                nn.Module, that takes dims_in input channels, and dims_out output
+                channels. See tutorial for examples. One subnetwork will be
+                initialized in the block.
+            clamp: Soft clamping for the multiplicative component. The
+                amplification or attenuation of each input dimension can be at most
+                exp(±clamp).
+            clamp_activation: Function to perform the clamping. String values
+                "ATAN", "TANH", and "SIGMOID" are recognized, or a function of
+                object can be passed. TANH behaves like the original realNVP paper.
+                A custom function should take tensors and map -inf to -1 and +inf to +1.
+        '''
+
+        super().__init__(dims_in, dims_c, clamp, clamp_activation)
+        nn_type = nn_settings['nn_type']
+        if nn_type == 'SimpleConvNet':
+            c_hidden_factor = nn_settings['c_hidden_factor']
+            self.subnet = subnet_constructor(c_in=self.split_len1 + self.condition_length, \
+                                        c_out = 2 * self.split_len2, c_hidden_factor=c_hidden_factor)
+        elif nn_type == 'nnflowpp':
+            coupling = 'Affine'
+            in_channels = self.split_len1 + self.condition_length
+            out_channels = 2 * self.split_len2
+            num_channels_factor = nn_settings['num_channels_factor']
+            num_blocks = nn_settings['num_blocks']
+            drop_prob = nn_settings['drop_prob']
+            use_attn = nn_settings['use_attn']
+            #aux_channels = nn_settings['aux_channels']
+            self.subnet = subnet_constructor(coupling, in_channels, out_channels, num_channels_factor, num_blocks, drop_prob, use_attn)
+
+    def forward(self, x, c=[], rev=False, jac=True):
+        x1, x2 = torch.split(x[0], [self.split_len1, self.split_len2], dim=1)
+        x1_c = torch.cat([x1, *c], 1) if self.conditional else x1
+
+        # notation:
+        # x1, x2: two halves of the input
+        # y1, y2: two halves of the output
+        # a: all affine coefficients
+        # s, t: multiplicative and additive coefficients
+        # j: log det Jacobian
+
+        a = self.subnet(x1_c)
+        s, t = a[:, :self.split_len2], a[:, self.split_len2:]
+        s = self.clamp * self.f_clamp(s)
+        j = torch.sum(s, dim=tuple(range(1, self.ndims + 1)))
+
+        if rev:
+            y2 = (x2 - t) * torch.exp(-s)
+            j *= -1
+        else:
+            y2 = x2 * torch.exp(s) + t
+
+        return (torch.cat((x1, y2), 1),), j
+
+
+"""deprecated code"""
 
 class AffineCouplingLayer(nn.Module):
     def __init__(self, c_in, dim, mask_info, network):
