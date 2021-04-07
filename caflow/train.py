@@ -33,7 +33,7 @@ def main(hparams):
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                           accumulate_grad_batches=hparams.accumulate_grad_batches, \
                           resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
-                          callbacks=[EarlyStopping('val_loss', patience=50)])
+                          callbacks=[EarlyStopping('val_loss', patience=100)])
         trainer.fit(model, train_dataloader, val_dataloader)
         
     else:
@@ -49,7 +49,7 @@ def main(hparams):
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                         accumulate_grad_batches=hparams.accumulate_grad_batches, \
                         resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
-                        callbacks=[EarlyStopping('val_loss', patience=50)])
+                        callbacks=[EarlyStopping('val_loss', patience=100)])
         trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
@@ -80,8 +80,8 @@ if __name__ == '__main__':
     parser.add_argument('--val-shortcut', default=True, action='store_false')
     
     parser.add_argument('--model-scales', type=int, default=4)
-    parser.add_argument('--rflow-scale-depth', type=int, default=16)
-    parser.add_argument('--tflow-scale-depth', type=int, default=16)
+    parser.add_argument('--rflow-scale-depth', type=int, default=8)
+    parser.add_argument('--tflow-scale-depth', type=int, default=8)
     parser.add_argument('--u-cond-scale-depth', type=int, default=4, help='unshared conditional scale depth')
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')

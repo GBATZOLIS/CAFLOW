@@ -2,10 +2,12 @@ import numpy as np
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
+from FrEIA.modules import InvertibleModule 
 
-class InvertibleConv1x1(nn.Module):
-    def __init__(self, num_channels, LU_decomposed=False):
-        super().__init__()
+class InvertibleConv1x1(InvertibleModule):
+    def __init__(self, dims_in, dims_c=None, LU_decomposed=False):
+        super().__init__(dims_in, dims_c)
+        num_channels = dims_in[0][0]
         w_shape = [num_channels, num_channels]
         w_init = np.linalg.qr(np.random.randn(*w_shape))[0].astype(np.float32)
         self.register_parameter("weight", nn.Parameter(torch.Tensor(w_init)))
@@ -24,19 +26,16 @@ class InvertibleConv1x1(nn.Module):
                 .view(w_shape[0], w_shape[1], 1, 1)
         return weight, dlogdet
 
-    def forward(self, input, logdet=None, reverse=False):
+    def forward(self, x, c=None, jac=True, rev=False):
         """
         log-det = log|abs(|W|)| * pixels
         """
-        weight, dlogdet = self.get_weight(input, reverse)
+        input=x[0]
+        weight, dlogdet = self.get_weight(input, rev)
         
-        if not reverse:
+        if not rev:
             z = F.conv2d(input, weight)
-            if logdet is not None:
-                logdet = logdet + dlogdet
-            return z, logdet
+            return (z,), dlogdet
         else:
             z = F.conv2d(input, weight)
-            if logdet is not None:
-                logdet = logdet - dlogdet
-            return z, logdet
+            return (z,), dlogdet

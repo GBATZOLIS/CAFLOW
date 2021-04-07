@@ -41,15 +41,17 @@ class FlowBlock(nn.Module):
         
         transformed_channels = 2**dim*channels
         transformed_resolution = tuple([x//2 for x in self.resolution])
+        dims_in = [(transformed_channels,)+transformed_resolution]
 
         #transition step
-        #for _ in range(2):
-        #    self.layers.append(ActNorm(num_features=transformed_channels, dim=dim))
-        #    self.layers.append(InvertibleConv1x1(num_channels = transformed_channels))
+        for _ in range(2):
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
-        dims_in = [(transformed_channels,)+transformed_resolution]
         for i in range(depth):
-            self.layers.append(Fm.AllInOneBlock(dims_in=dims_in, \
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            self.layers.append(Fm.GLOWCouplingBlock(dims_in=dims_in, \
                                                 subnet_constructor=SimpleConvNet))
     
     def forward(self, h, logdet, reverse=False):
