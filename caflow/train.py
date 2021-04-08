@@ -33,7 +33,7 @@ def main(hparams):
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                           accumulate_grad_batches=hparams.accumulate_grad_batches, \
                           resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
-                          callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor(logging_interval='step')])
+                          callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
         trainer.fit(model, train_dataloader, val_dataloader)
         
     else:
