@@ -17,7 +17,7 @@ from caflow.models.UFlow import UFlow
 from caflow.data.create_dataset import create_dataset
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
-
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
@@ -33,7 +33,7 @@ def main(hparams):
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                           accumulate_grad_batches=hparams.accumulate_grad_batches, \
                           resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
-                          callbacks=[EarlyStopping('val_loss', patience=100)])
+                          callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor(logging_interval='step')])
         trainer.fit(model, train_dataloader, val_dataloader)
         
     else:
@@ -49,7 +49,7 @@ def main(hparams):
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                         accumulate_grad_batches=hparams.accumulate_grad_batches, \
                         resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
-                        callbacks=[EarlyStopping('val_loss', patience=100)])
+                        callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
         trainer.fit(model, train_dataloader, val_dataloader)
 
 if __name__ == '__main__':
@@ -65,11 +65,17 @@ if __name__ == '__main__':
     parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
     parser.add_argument('--gpus', default=None)
     parser.add_argument('--num_nodes', type=int, default=1, help='Number of nodes. Default=1.')
-    parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
+    
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
     # -> Stop criteria
     parser.add_argument('--max-steps', type=int, default=200000) #1
+
+    #optimiser-scheduler settings
+    parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
+    parser.add_argument('--use-warm-up', type=bool, default=True)
+    parser.add_argument('--warm_up', type=int, default=200, help='num of warm up steps.')
+    parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
 
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)

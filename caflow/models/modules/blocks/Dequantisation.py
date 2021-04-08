@@ -92,7 +92,11 @@ class VariationalDequantization(Dequantisation):
         deq_noise, ldj = self.sigmoid(deq_noise, ldj, reverse=True)
         deq_noise=(deq_noise,)
         for layer in self.layers:
-            deq_noise, jac = layer(deq_noise, c=[img], rev=False)
+            if isinstance(layer, AffineCouplingOneSided):
+                deq_noise, jac = layer(deq_noise, c=[img], rev=False)
+            else:
+                deq_noise, jac = layer(deq_noise, rev=False)
+                
             ldj += jac
 
         deq_noise, ldj = self.sigmoid(deq_noise[0], ldj, reverse=False)
