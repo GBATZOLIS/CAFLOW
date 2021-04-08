@@ -98,6 +98,7 @@ class UFlow(pl.LightningModule):
         return y
     
     def configure_optimizers(self,):
+        """
         def scheduler_lambda_function(s):
             #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
             if self.use_warm_up:
@@ -107,10 +108,10 @@ class UFlow(pl.LightningModule):
                     self.gamma**(self.current_epoch)
             else:
                 return self.gamma**(self.current_epoch)
-
+        """
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         #scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.999)
-        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),
+        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, lambda s: min(1., s / self.warm_up)),
                     'interval': 'step'}  # called after each training step
 
         return [optimizer], [scheduler]
