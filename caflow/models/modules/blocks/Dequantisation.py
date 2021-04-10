@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
+from caflow.models.modules.blocks import coupling_layer
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
 from caflow.models.modules.networks.nnflowpp import nnflowpp
@@ -67,19 +68,21 @@ class Dequantisation(nn.Module):
 
 class VariationalDequantization(Dequantisation):
 
-    def __init__(self, channels=3, depth=8, dim=2, resolution=(64,64), quants=256, alpha=1e-5, nn_settings=None):
+    def __init__(self, channels=3, depth=8, dim=2, resolution=(64,64), quants=256, alpha=1e-5, coupling_type='Affine', nn_settings=None):
         """
         Inputs:
             var_flows - A list of flow transformations to use for modeling q(u|x)
             alpha - Small constant, see Dequantization for details
         """
         super().__init__(dim, quants, alpha)
+        self.coupling_type = coupling_type
+
         self.layers = nn.ModuleList()
         dims_in = [(channels,)+resolution]
         for _ in range(depth):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             self.layers.append(InvertibleConv1x1(dims_in=dims_in))
-            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
+            self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, 
                                                       dims_c=dims_in,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']), 
                                                       nn_settings=nn_settings))
@@ -92,7 +95,7 @@ class VariationalDequantization(Dequantisation):
         deq_noise, ldj = self.sigmoid(deq_noise, ldj, reverse=True)
         deq_noise=(deq_noise,)
         for layer in self.layers:
-            if isinstance(layer, AffineCouplingOneSided):
+            if isinstance(layer, coupling_layer(self.coupling_type)):
                 deq_noise, jac = layer(deq_noise, c=[img], rev=False)
             else:
                 deq_noise, jac = layer(deq_noise, rev=False)

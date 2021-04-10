@@ -26,7 +26,7 @@ class UFlow(pl.LightningModule):
             'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
             'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
         self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, resolution=opts.load_size, scales=opts.model_scales, 
-                                      scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth,
+                                      scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth, coupling_type=opts.coupling_type,
                                       nn_settings=nn_settings)
         
         #set the prior distribution for the latents
@@ -98,7 +98,6 @@ class UFlow(pl.LightningModule):
         return y
     
     def configure_optimizers(self,):
-        """
         def scheduler_lambda_function(s):
             #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
             if self.use_warm_up:
@@ -108,12 +107,13 @@ class UFlow(pl.LightningModule):
                     self.gamma**(self.current_epoch)
             else:
                 return self.gamma**(self.current_epoch)
-        """
+        
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        #scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.999)
-        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, lambda s: min(1., s / self.warm_up)),
+        
+        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),
                     'interval': 'step'}  # called after each training step
 
+        #lambda s: min(1., s / self.warm_up) -> warm_up lambda
         return [optimizer], [scheduler]
     
 

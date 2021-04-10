@@ -12,6 +12,7 @@ from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsamplin
 
 from caflow.models.modules.blocks.ActNorm import ActNorm
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
+from caflow.models.modules.blocks import coupling_layer
 
 from caflow.models.modules.networks.GatedConvNet import GatedConvNet
 from caflow.models.modules.networks.SimpleConvNet import SimpleConvNet
@@ -22,7 +23,7 @@ import FrEIA.modules as Fm
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
 
 class FlowBlock(nn.Module):
-    def __init__(self, channels, dim, resolution, depth, nn_settings):
+    def __init__(self, channels, dim, resolution, depth, coupling_type, nn_settings):
         super(FlowBlock, self).__init__()
         #shape: (channels, X, Y, Z) for 3D, (channels, X, Y) for 2D
         #we intend to use fully convolutional models which means that we do not need the real shape. We just need the input channels
@@ -54,7 +55,7 @@ class FlowBlock(nn.Module):
         for _ in range(depth):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             self.layers.append(InvertibleConv1x1(dims_in=dims_in))
-            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, \
+            self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, \
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 nn_settings=nn_settings))
     

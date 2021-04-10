@@ -97,14 +97,15 @@ if __name__ == '__main__':
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
     #Architecture (coupling layer type, NN which parameterises the coupling layer etc.)
+    parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers')
     ##settings for the SimpleConvNet architecture
     parser.add_argument('--c-hidden-factor', type=int, default=16, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
     parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
-    parser.add_argument('--num-components', default=32, type=int, help='Number of components in the mixture')
-    parser.add_argument('--num-channels-factor', default=8, type=int, help='Number of channels in Flow++')
+    parser.add_argument('--num-components', default=4, type=int, help='Number of components in the mixture')
+    parser.add_argument('--num-channels-factor', default=4, type=int, help='Number of channels in Flow++')
     parser.add_argument('--use-attn', default=False, type=bool, help='whether to use attention in the convolution blocks. Default=False.')
     
     #The following arguments are used for conditional image sampling in the validation process
