@@ -104,12 +104,11 @@ class UFlow(pl.LightningModule):
                 if s < self.warm_up:
                     return s / self.warm_up
                 else:
-                    self.gamma**(self.current_epoch)
+                    return self.gamma**(self.current_epoch)
             else:
                 return self.gamma**(self.current_epoch)
         
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        
         scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),
                     'interval': 'step'}  # called after each training step
 
