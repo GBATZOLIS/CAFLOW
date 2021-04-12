@@ -69,14 +69,14 @@ if __name__ == '__main__':
     
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
-    parser.add_argument('--gradient_clip_val', type=float, default=0, help='clip the gradient norm computed over all model parameters together')
+    parser.add_argument('--gradient_clip_val', type=float, default=1, help='clip the gradient norm computed over all model parameters together')
     # -> Stop criteria
     parser.add_argument('--max-steps', type=int, default=200000) #1
 
     #optimiser-scheduler settings
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--use-warm-up', type=bool, default=True)
-    parser.add_argument('--warm_up', type=int, default=200, help='num of warm up steps.')
+    parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
 
     #model specific arguments
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     
     #Architecture (coupling layer type, NN which parameterises the coupling layer etc.)
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
-    parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers')
+    parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
     ##settings for the SimpleConvNet architecture
     parser.add_argument('--c-hidden-factor', type=int, default=16, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
