@@ -30,7 +30,8 @@ def main(hparams):
         val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
         model = UFlow(hparams)
-        trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
+        trainer = Trainer(num_nodes=hparams.num_nodes, gradient_clip_val=hparams.gradient_clip_val, \
+                          gpus=hparams.gpus, accelerator=hparams.accelerator, \
                           accumulate_grad_batches=hparams.accumulate_grad_batches, \
                           resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
                           callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
@@ -68,6 +69,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
+    parser.add_argument('--gradient_clip_val', type=float, default=0, help='clip the gradient norm computed over all model parameters together')
     # -> Stop criteria
     parser.add_argument('--max-steps', type=int, default=200000) #1
 
