@@ -196,6 +196,82 @@ class AffineCouplingOneSided(_BaseCouplingBlock):
 
         return (torch.cat((x1, y2), 1),), j
 
+class ConditionalAffineTransform(_BaseCouplingBlock):
+    '''Similar to the conditioning layers from SPADE (Park et al, 2019): Perform
+    an affine transformation on the whole input, where the affine coefficients
+    are predicted from only the condition.
+    '''
+
+    def __init__(self, dims_in, dims_c=[],
+                 subnet_constructor: Callable = None,
+                 clamp: float = 2.,
+                 clamp_activation: Union[str, Callable] = "ATAN", nn_settings=None):
+        '''
+        Additional args in docstring of base class.
+        Args:
+          subnet_constructor: function or class, with signature
+            constructor(dims_in, dims_out).  The result should be a torch
+            nn.Module, that takes dims_in input channels, and dims_out output
+            channels. See tutorial for examples. One subnetwork will be
+            initialized in the block.
+          clamp: Soft clamping for the multiplicative component. The
+            amplification or attenuation of each input dimension can be at most
+            exp(±clamp).
+          clamp_activation: Function to perform the clamping. String values
+            "ATAN", "TANH", and "SIGMOID" are recognized, or a function of
+            object can be passed. TANH behaves like the original realNVP paper.
+            A custom function should take tensors and map -inf to -1 and +inf to +1.
+        '''
+
+        super().__init__(dims_in, dims_c, clamp, clamp_activation)
+
+        if not self.conditional:
+            raise ValueError("ConditionalAffineTransform must have a condition")
+        
+        nn_type = nn_settings['nn_type']
+        if nn_type == 'SimpleConvNet':
+            c_hidden_factor = nn_settings['c_hidden_factor']
+            self.subnet = subnet_constructor(c_in=self.condition_length, \
+                                        c_out = 2 * self.channels, c_hidden_factor=c_hidden_factor)
+        elif nn_type == 'nnflowpp':
+            coupling = 'Affine'
+            in_channels = self.condition_length
+            out_channels = 2 * self.channels
+            num_channels_factor = nn_settings['num_channels_factor']
+            num_blocks = nn_settings['num_blocks']
+            drop_prob = nn_settings['drop_prob']
+            use_attn = nn_settings['use_attn']
+            #aux_channels = nn_settings['aux_channels']
+            self.subnet = subnet_constructor(coupling, in_channels, out_channels, num_channels_factor, num_blocks, drop_prob, use_attn)
+
+
+    def forward(self, x, c=[], rev=False, jac=True):
+        if len(c) > 1:
+            cond = torch.cat(c, 1)
+        else:
+            cond = c[0]
+
+        # notation:
+        # x: inputs (i.e. 'x-side' when rev is False, 'z-side' when rev is True)
+        # y: outputs (same scheme)
+        # *_c: variables with condition appended
+        # *1, *2: left half, right half
+        # a: all affine coefficients
+        # s, t: multiplicative and additive coefficients
+        # j: log det Jacobian
+
+        a = self.subnet(cond)
+        s, t = a[:, :self.channels], a[:, self.channels:]
+        s = self.clamp * self.f_clamp(s)
+        j = torch.sum(s, dim=tuple(range(1, self.ndims + 1)))
+
+        if rev:
+            y = (x[0] - t) * torch.exp(-s)
+            return (y,), -j
+        else:
+            y = torch.exp(s) * x[0] + t
+            return (y,), j
+
 
 """deprecated code"""
 

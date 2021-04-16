@@ -7,9 +7,6 @@ Created on Sun Jan 24 17:24:21 2021
 """
 
 import torch.nn as nn
-from iunets.iunets.layers import InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D, \
-                          InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D
-
 from caflow.models.modules.blocks.ActNorm import ActNorm
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.blocks import coupling_layer
@@ -33,11 +30,7 @@ class FlowBlock(nn.Module):
         self.depth = depth
 
         self.layers = nn.ModuleList()
-        
-        #choose the correct invertible downsampling and channel mixining layers from the iUNETS library based on the dimension of the tensor
-        self.InvertibleDownsampling = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1]
-        #self.InvertibleChannelMixing = [InvertibleChannelMixing1D, InvertibleChannelMixing2D, InvertibleChannelMixing3D][dim-1]
-        #self.layers.append(self.InvertibleDownsampling(in_channels = channels, stride=2, method='cayley', init='squeeze', learnable=False))
+
         self.layers.append(Fm.IRevNetDownsampling(dims_in=[(channels,)+resolution]))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
@@ -69,21 +62,13 @@ class FlowBlock(nn.Module):
     def encode(self, h, logdet):
         h=(h,)
         for layer in self.layers:
-            if isinstance(layer, self.InvertibleDownsampling):
-                h = layer(h[0])
-                h = (h,)
-            else:
-                h, jac = layer(h, rev=False)
-                logdet += jac
+            h, jac = layer(h, rev=False)
+            logdet += jac
         return h[0], logdet
 
     def decode(self, h, logdet):
         h=(h,)
         for layer in reversed(self.layers):
-            if isinstance(layer, self.InvertibleDownsampling):
-                h = layer.inverse(h[0])
-                h = (h,)
-            else:
-                h, jac = layer(h, rev=True)
-                logdet += jac
+            h, jac = layer(h, rev=True)
+            logdet += jac
         return h[0], logdet

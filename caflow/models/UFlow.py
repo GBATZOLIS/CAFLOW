@@ -22,12 +22,10 @@ class UFlow(pl.LightningModule):
         self.sample_norm_range = opts.sample_norm_range #tuple range
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
-        nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.c_hidden_factor, \
-            'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
-            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
+
         self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, resolution=opts.load_size, scales=opts.model_scales, 
                                       scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth, coupling_type=opts.coupling_type,
-                                      nn_settings=nn_settings)
+                                      nn_settings=self.create_nn_settings(opts))
         
         #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
@@ -36,6 +34,12 @@ class UFlow(pl.LightningModule):
         self.use_warm_up = opts.use_warm_up
         self.warm_up = opts.warm_up
         self.gamma = opts.gamma
+
+    def create_nn_settings(self, opts):
+        nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.UFLOW_c_hidden_factor, \
+            'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
+            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
+        return nn_settings
 
     def forward(self, y=None, z=[], logprior=0., logdet=0., reverse=False):
         return self.uflow(y=y, z=z, logprior=logprior, logdet=logdet, reverse=reverse)

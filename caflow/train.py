@@ -69,7 +69,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1, help='Accumulates grads every k batches or as set up in the dict.')
-    parser.add_argument('--gradient_clip_val', type=float, default=1, help='clip the gradient norm computed over all model parameters together')
+    parser.add_argument('--gradient_clip_val', type=float, default=0, help='clip the gradient norm computed over all model parameters together')
     # -> Stop criteria
     parser.add_argument('--max-steps', type=int, default=200000) #1
 
@@ -90,9 +90,9 @@ if __name__ == '__main__':
     parser.add_argument('--model-scales', type=int, default=4)
     parser.add_argument('--rflow-scale-depth', type=int, default=16)
     parser.add_argument('--tflow-scale-depth', type=int, default=16)
-    parser.add_argument('--u-cond-scale-depth', type=int, default=4, help='unshared conditional scale depth')
-    parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
-    parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')
+    parser.add_argument('--u-cond-scale-depth', type=int, default=1, help='unshared conditional scale depth')
+    parser.add_argument('--s-cond-s-scale-depth', type=int, default=2, help='shared conditional shared scale depth')
+    parser.add_argument('--s-cond-u-scale-depth', type=int, default=2, help='shared conditional unshared scale depth')
     
     parser.add_argument('--vardeq-depth', type=int, default=None, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
@@ -102,7 +102,8 @@ if __name__ == '__main__':
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
     ##settings for the SimpleConvNet architecture
-    parser.add_argument('--c-hidden-factor', type=int, default=16, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=16, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=1, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
     parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
@@ -122,7 +123,7 @@ if __name__ == '__main__':
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
-    parser.add_argument('--train-batch', type=int, default=128, help='train batch size')
+    parser.add_argument('--train-batch', type=int, default=8, help='train batch size')
     parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
     parser.add_argument('--train-workers', type=int, default=4, help='train_workers')
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')

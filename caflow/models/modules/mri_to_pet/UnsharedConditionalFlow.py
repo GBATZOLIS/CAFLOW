@@ -11,11 +11,13 @@ import torch.nn as nn
 from caflow.models.modules.blocks.ConditionalFlowBlock import g_S, g_I
 
 class UnsharedConditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, scale_depth):
+    def __init__(self, channels, dim, resolution, scales, scale_depth, nn_settings):
         super(UnsharedConditionalFlow, self).__init__()
         self.scale_flows = nn.ModuleList()
 
-        self.channels = 2**(dim-1)*channels #initial number of channels
+        #calculate the number of channels and resolution of L_N
+        self.top_channels = 2**(dim-1)*channels #number of channels of the top latent
+        self.top_resolution = [x//2 for x in resolution] #resolution of the top latent
         self.dim = dim
         self.scales = scales
 
@@ -23,29 +25,34 @@ class UnsharedConditionalFlow(nn.Module):
             scale_flow = nn.ModuleList()
 
             g_I_channels = self.calculate_scale_channels(dim, scale, flow_type='g_I')
-            scale_flow.append(g_I(channels=g_I_channels, dim=dim, depth=scale_depth))
+            g_I_resolution = self.calculate_scale_resolution(scale, flow_type='g_I')
+            scale_flow.append(g_I(channels=g_I_channels, dim=dim, \
+                                  resolution=g_I_resolution, depth=scale_depth, nn_settings=nn_settings))
             
             if scale < self.scales - 1:
                 for continued_scale in range(scale+1, self.scales):
                     g_S_channels = self.calculate_scale_channels(dim, continued_scale, flow_type='g_S')
-                    if continued_scale < self.scales-1: #last scale signaller
-                        last_scale = False
-                    else:
-                        last_scale = True
-                    scale_flow.append(g_S(channels=g_S_channels, dim=dim, depth=scale_depth, last_scale=last_scale))
+                    g_S_resolution = self.calculate_scale_resolution(continued_scale, flow_type='g_S')
+                    last_scale = False if continued_scale < (self.scales-1) else True
+                    scale_flow.append(g_S(channels=g_S_channels, dim=dim, resolution=g_S_resolution,
+                                          depth=scale_depth, nn_settings=nn_settings, last_scale=last_scale))
             
             self.scale_flows.append(scale_flow)
         
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
 
+    def calculate_scale_resolution(self, scale, flow_type):
+        return tuple([x//2**scale for x in self.top_resolution])
+
     def calculate_scale_channels(self, dim, scale, flow_type='g_I'):
         if scale < self.scales-1:
-            return 2**((dim-1)*scale)*self.channels
+            return 2**((dim-1)*scale)*self.top_channels
         elif scale == self.scales-1: #last scale
             if flow_type=='g_I':
-                return 2**((dim-1)*(scale-1))*2**dim*self.channels
+                return 2**((dim-1)*(scale-1))*2**dim*self.top_channels
             elif flow_type=='g_S':
-                return 2**((dim-1)*scale)*self.channels
+                return 2**((dim-1)*scale)*self.top_channels
+        
     
     def forward(self, L=[], z=[], D=[], logdet=0., reverse=False):
         if reverse:
