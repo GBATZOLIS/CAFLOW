@@ -23,7 +23,7 @@ class SimpleConvNet(nn.Module):
         super(SimpleConvNet, self).__init__()
         
         conv = Conv2d
-        c_hidden = c_hidden_factor * c_in
+        c_hidden = int(c_hidden_factor * c_in)
         
         layers = nn.ModuleList()
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
