@@ -174,7 +174,18 @@ class AffineCouplingOneSided(_BaseCouplingBlock):
 
     def forward(self, x, c=[], rev=False, jac=True):
         x1, x2 = torch.split(x[0], [self.split_len1, self.split_len2], dim=1)
-        x1_c = torch.cat([x1, *c], 1) if self.conditional else x1
+        if self.conditional:
+            if x1.size(0) > c[0].size(0):
+                gain_factor = x1.size(0) // c[0].size(0)
+                repeat_tuple = tuple([gain_factor]+[1 for i in range(len(c[0].shape)-1)])
+                c = torch.cat(c, 1).repeat(repeat_tuple)
+                x1_c = torch.cat([x1, c], 1)
+            elif x1.size(0) == c[0].size(0):
+                x1_c = torch.cat([x1, *c], 1)
+            else:
+                raise NotImplementedError
+        else:
+            x1_c = x1
 
         # notation:
         # x1, x2: two halves of the input
@@ -246,10 +257,14 @@ class ConditionalAffineTransform(_BaseCouplingBlock):
 
 
     def forward(self, x, c=[], rev=False, jac=True):
-        if len(c) > 1:
+        if x[0].size(0) > c[0].size(0):
+            gain_factor = x[0].size(0) // c[0].size(0)
+            repeat_tuple = tuple([gain_factor]+[1 for i in range(len(c[0].shape)-1)])
+            cond = torch.cat(c, 1).repeat(repeat_tuple)
+        elif x[0].size(0) == c[0].size(0):
             cond = torch.cat(c, 1)
         else:
-            cond = c[0]
+            raise NotImplementedError
 
         # notation:
         # x: inputs (i.e. 'x-side' when rev is False, 'z-side' when rev is True)

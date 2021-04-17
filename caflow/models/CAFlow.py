@@ -60,12 +60,13 @@ class CAFlow(pl.LightningModule):
             self.model['tflow'] = UFlow(opts)
 
         if opts.shared:
-            self.model['SharedConditionalFlow'] = SharedConditionalFlow(channels=opts.data_channels, \
-                                                                        dim=opts.data_dim,\
+            self.model['SharedConditionalFlow'] = SharedConditionalFlow(channels=opts.data_channels, 
+                                                                        dim=opts.data_dim,
                                                                         resolution = [opts.load_size for _ in range(self.dim)],
-                                                                        scales=opts.model_scales, \
-                                                                        shared_scale_depth=opts.s_cond_s_scale_depth, \
-                                                                        unshared_scale_depth=opts.s_cond_u_scale_depth)
+                                                                        scales=opts.model_scales, 
+                                                                        shared_scale_depth=opts.s_cond_s_scale_depth, 
+                                                                        unshared_scale_depth=opts.s_cond_u_scale_depth,
+                                                                        nn_settings=self.create_nn_settings(opts))
         else:
             self.model['UnsharedConditionalFlow'] = UnsharedConditionalFlow(channels=opts.data_channels, 
                                                                             dim=opts.data_dim, 

@@ -14,32 +14,31 @@ import torch
 
 
 class SharedConditionalFlow(nn.Module):
-    def __init__(self, channels, dim, scales, shared_scale_depth, unshared_scale_depth):
+    def __init__(self, channels, dim, resolution, scales, shared_scale_depth, unshared_scale_depth, nn_settings):
         super(SharedConditionalFlow, self).__init__()
 
         self.g_I_cond_flows = nn.ModuleList()
         self.g_S_cond_flows = nn.ModuleList()
         
-        self.channels = 2**(dim-1)*channels #initial number of channels
+        #calculate the number of channels and resolution of L_N
+        self.top_channels = 2**(dim-1)*channels #number of channels of the top latent
+        self.top_resolution = [x//2 for x in resolution] #resolution of the top latent
         self.dim = dim
         self.scales = scales
         
 
         for scale in range(self.scales):
             g_I_channels = self.calculate_scale_channels(dim, scale, flow_type='g_I')
-            #print('g_I_channels: ', g_I_channels)
-            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, depth=unshared_scale_depth))
+            g_I_resolution = self.calculate_scale_resolution(scale)
+            self.g_I_cond_flows.append(g_I(channels=g_I_channels, dim=dim, \
+                        resolution=g_I_resolution, depth=unshared_scale_depth, nn_settings=nn_settings))
             
-            if scale > 0:#There is no shared flow in the first level
+            if scale > 0: #There is no shared flow in the first level
                 g_S_channels = self.calculate_scale_channels(dim, scale, flow_type='g_S')
-                #print('g_S_channels: ', g_S_channels)
-                
-                if scale < self.scales - 1: #last scale signaller
-                    last_scale=False
-                else:
-                    last_scale=True
-                    
-                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, depth=shared_scale_depth, last_scale=last_scale))
+                g_S_resolution = self.calculate_scale_resolution(scale)
+                last_scale = False if scale < (self.scales-1) else True #last scale signaller -> we treat it a bit differently
+                self.g_S_cond_flows.append(g_S(channels=g_S_channels, dim=dim, resolution=g_S_resolution,
+                        depth=shared_scale_depth, nn_settings=nn_settings, last_scale=last_scale))
         
         #print(len(self.g_I_cond_flows)) #n
         #print(len(self.g_S_cond_flows)) #n-1
@@ -47,14 +46,17 @@ class SharedConditionalFlow(nn.Module):
         #self.device = opts.device['Cond_flow'] #we do not need that if we use pytorch-lightning
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
 
+    def calculate_scale_resolution(self, scale):
+        return tuple([x//2**scale for x in self.top_resolution])
+
     def calculate_scale_channels(self, dim, scale, flow_type='g_I'):
         if scale < self.scales-1:
-            return 2**((dim-1)*scale)*self.channels
+            return 2**((dim-1)*scale)*self.top_channels
         elif scale == self.scales-1: #last scale
             if flow_type=='g_I':
-                return 2**((dim-1)*(scale-1))*2**dim*self.channels
+                return 2**((dim-1)*(scale-1))*2**dim*self.top_channels
             elif flow_type=='g_S':
-                return 2**((dim-1)*scale)*self.channels
+                return 2**((dim-1)*scale)*self.top_channels
         
     def forward(self, L=[], z=[], D=[], logdet=0., reverse=False, shortcut=False):
         if reverse:

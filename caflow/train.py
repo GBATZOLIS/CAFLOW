@@ -84,8 +84,8 @@ if __name__ == '__main__':
     parser.add_argument('--data-channels', type=int, default=3)
 
     parser.add_argument('--shared', default=False, action='store_true', help='Set shared to True if want to use shared conditional flow instead of normal conditional flow.')
-    parser.add_argument('--train-shortcut', default=True, action='store_false')
-    parser.add_argument('--val-shortcut', default=True, action='store_false')
+    parser.add_argument('--train-shortcut', default=True, type=bool, help='Use the training shortcut if a shared conditional architecture is used.')
+    parser.add_argument('--val-shortcut', default=True, type=bool, help='Same as the train-shorcut but for the validation loop.')
     
     parser.add_argument('--model-scales', type=int, default=4)
     parser.add_argument('--rflow-scale-depth', type=int, default=16)
