@@ -102,8 +102,8 @@ if __name__ == '__main__':
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
     ##settings for the SimpleConvNet architecture
-    parser.add_argument('--UFLOW-c-hidden-factor', type=float, default=128, help='c_hidden=c_hidden_factor*in_channels')
-    parser.add_argument('--CAFLOW-c-hidden-factor', type=float, default=64, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=128, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
     parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
