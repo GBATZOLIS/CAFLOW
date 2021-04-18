@@ -94,7 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')
     
-    parser.add_argument('--vardeq-depth', type=int, default=8, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
+    parser.add_argument('--vardeq-depth', type=int, default=0, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
     
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
     ##settings for the SimpleConvNet architecture
-    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=128, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
     parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
