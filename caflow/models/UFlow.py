@@ -14,6 +14,7 @@ class UFlow(pl.LightningModule):
         self.scales = opts.model_scales
         self.channels = opts.data_channels
         self.resolution = [opts.load_size for _ in range(self.dim)]
+        self.total_dims = self.channels*np.prod(self.resolution) #-->addition
 
         #validation sampling settings
         self.num_val_samples = opts.num_val_u_samples #num of validation samples
@@ -89,17 +90,58 @@ class UFlow(pl.LightningModule):
         self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
     def sample(self, num_samples):
-        z = []
+        flattened_latents = self.prior.sample(sample_shape=(num_samples, self.total_dims)).to(self.device)
+        scale_z = self.convert_to_scale_tensor(flattened_latents)
+        y, _ = self.uflow(z=scale_z, reverse=True)
+        return y
+
+    def sample_from_annealed_distribution(self, T=0.97, num_samples=1):
+        def log_prob(z):
+            assert z.size(0)==1, 'z must have shape of the form (1,...)'
+            scale_tensor = self.convert_to_scale_tensor(z)
+            y, logdet = self.uflow(z=scale_tensor, reverse=True)
+            return gamma*self.prior.log_prob(z).sum()+(1-gamma)*logdet.sum()
+
+        gamma = 1.0/(T**2.0)
+        burn=500
+        step_size = .3
+        L = 5
+        N_nuts = burn + 1
+        for _ in range(num_samples):
+            params_init = self.prior.sample(self.total_dims)
+            params_hmc_nuts = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init,
+                                                num_samples=N_nuts,step_size=step_size,num_steps_per_sample=L,
+                                                sampler=hamiltorch.Sampler.HMC_NUTS, burn=burn,
+                                                desired_accept_rate=0.8)
+    
+    def convert_to_scale_tensor(self, flattened_tensor):
+        #input: flattened_tensor
+        #output: z reshaped in a scale tensor - a list of number_scales tensors - [(batch, 2channels, res/2, res/2), (batch, 4channels, res/4, res/4)...]
+        batch_size = flattened_tensor.size(0)
+        previous_dimensions=0
+        scale_tensor = []
         for i in range(1, self.scales+1):
             if i<self.scales:
-                sampling_shape = (num_samples, 2**(i*(self.dim-1))*self.channels) + tuple([x//2**i for x in self.resolution])
-                z.append(self.prior.sample(sample_shape=sampling_shape).to(self.device))
+                scale_shape = (2**(i*(self.dim-1))*self.channels, ) + tuple([x//2**i for x in self.resolution])
             elif i==self.scales: #last scale has the same dimensionality as the pre-last just squeezed by a factor of 2.
-                sampling_shape = (num_samples, 2**((i-1)*(self.dim-1)+self.dim)*self.channels) + tuple([x//2**i for x in self.resolution])
-                z.append(self.prior.sample(sample_shape=sampling_shape).to(self.device))
-        
-        y, _ = self.uflow(z=z, reverse=True)
-        return y
+                scale_shape = (2**((i-1)*(self.dim-1)+self.dim)*self.channels, )+tuple([x//2**i for x in self.resolution])
+
+            new_dimensions = np.prod(scale_shape)
+            scale = torch.reshape(flattened_tensor[:, previous_dimensions:new_dimensions], shape=(batch_size,) + scale_shape)
+            scale_tensor.append(scale)
+        return scale_tensor
+    
+    def convert_to_flattened_tensor(self, scale_tensor):
+        #input: scale tensor
+        #output: flattened tensor
+        flattened_tensor = []
+        for i in range(1, self.scales+1):
+            flattened_tensor.append(torch.reshape(scale_tensor[i], (scale_tensor[i].size(0), -1)))
+        flattened_tensor = torch.cat(flattened_tensor, dim=1)
+        return flattened_tensor
+
+
+
     
     def configure_optimizers(self,):
         def scheduler_lambda_function(s):

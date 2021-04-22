@@ -18,6 +18,7 @@ from caflow.data.create_dataset import create_dataset
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import LearningRateMonitor
+import torch.optim as optim
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
@@ -37,7 +38,7 @@ def main(hparams):
                           callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
         trainer.fit(model, train_dataloader, val_dataloader)
         
-    else:
+    elif hparams.pretrain in ['end-to-end', 'conditional']:
         train_dataset = TemplateDataset(hparams, phase='train')
         train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
                                     num_workers=hparams.train_workers)
@@ -52,15 +53,57 @@ def main(hparams):
                         resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
                         callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
         trainer.fit(model, train_dataloader, val_dataloader)
+    elif hparams.pretrain == 'finetuning':
+        train_dataset = TemplateDataset(hparams, phase='train')
+        train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
+                                    num_workers=hparams.train_workers)
+        
+        val_dataset = TemplateDataset(hparams, phase='val')
+        val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
+                                    num_workers=hparams.val_workers)
+        class FineTuner(CAFlow):
+            def __init__(self, hparams, finetuning_lr):
+                super(FineTuner, self).__init__(hparams)
+                self.finetuning_lr=finetuning_lr
+            
+            def configure_optimizers(self,):
+                def scheduler_lambda_function(s):
+                    #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
+                    if self.use_warm_up:
+                        if s < self.warm_up:
+                            return s / self.warm_up
+                        else:
+                            return self.gamma**(self.current_epoch)
+                    else:
+                        return self.gamma**(self.current_epoch)
+                
+                optimizer = optim.Adam(self.parameters(), lr=self.finetuning_lr)
+                scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),
+                            'interval': 'step'}  # called after each training step
+
+                #lambda s: min(1., s / self.warm_up) -> warm_up lambda
+                return [optimizer], [scheduler]
+    
+
+        model = FineTuner.load_from_checkpoint(hparams.finetuning_checkpoint, hparams=hparams, finetuning_lr=hparams.finetuning_lr)
+        trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
+                        accumulate_grad_batches=hparams.accumulate_grad_batches, \
+                        resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
+                        callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
+        trainer.fit(model, train_dataloader, val_dataloader)
+            
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()
 
     #pretraining settings
-    parser.add_argument('--pretrain', type=str, default='end-to-end', help='which part of the model to pretrain. Default: end-to-end')
+    parser.add_argument('--pretrain', type=str, default='end-to-end', help='which part of the model to pretrain. Default: end-to-end. Options=[end-to-end, conditional, A, B]')
     parser.add_argument('--rflow-checkpoint', type=str, default=None)
     parser.add_argument('--tflow-checkpoint', type=str, default=None)
-    parser.add_argument('--cflow-checkpoint', type=str, default=None)
+    # finetuning settings
+    parser.add_argument('--finetuning-checkpoint', type=str, default=None)
+    parser.add_argument('--finetuning-lr', type=float, default=1e-4, help='Starting learning rate of the finetuner')
 
     #Trainer arguments
     parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
