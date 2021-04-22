@@ -65,6 +65,11 @@ def main(hparams):
             def __init__(self, hparams, finetuning_lr):
                 super(FineTuner, self).__init__(hparams)
                 self.finetuning_lr=finetuning_lr
+
+                for param in self.parameters():
+                    if not param.requires_grad:
+                        print('param frozen')
+                        param.requires_grad = True
             
             def configure_optimizers(self,):
                 def scheduler_lambda_function(s):
