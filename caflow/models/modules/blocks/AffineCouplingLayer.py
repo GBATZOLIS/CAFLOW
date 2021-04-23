@@ -26,7 +26,7 @@ class _BaseCouplingBlock(InvertibleModule):
 
     def __init__(self, dims_in, dims_c=[],
                  clamp: float = 2.,
-                 clamp_activation: Union[str, Callable] = "ATAN"):
+                 clamp_activation: Union[str, Callable] = "TANH"):
         '''
         Additional args in docstring of base class.
         Args:

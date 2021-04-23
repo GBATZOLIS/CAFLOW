@@ -80,7 +80,8 @@ class CAFlow(pl.LightningModule):
 
         #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
-        
+        #loss function settings
+        self.lamda = opts.lamda
         #optimiser settings
         self.learning_rate = opts.learning_rate
         self.use_warm_up = opts.use_warm_up
@@ -105,10 +106,11 @@ class CAFlow(pl.LightningModule):
         else:
             Z_cond, condlogprior, condlogdet = self.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
 
-        logjoint = rlogprior + rlogdet + tlogdet + condlogprior + condlogdet
+        logjoint = self.lamda*(rlogprior + rlogdet) + tlogdet + condlogprior + condlogdet
 
         if scaled:
-            scaled_logjoint = logjoint*np.log2(np.exp(1))/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
+            #scaled_logjoint = logjoint*np.log2(np.exp(1))/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
+            scaled_logjoint = logjoint/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
             return scaled_logjoint
         else:
             return logjoint

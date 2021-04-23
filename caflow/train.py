@@ -136,9 +136,9 @@ if __name__ == '__main__':
     parser.add_argument('--val-shortcut', default=True, type=bool, help='Same as the train-shorcut but for the validation loop.')
     
     parser.add_argument('--model-scales', type=int, default=4)
-    parser.add_argument('--rflow-scale-depth', type=int, default=32)
-    parser.add_argument('--tflow-scale-depth', type=int, default=32)
-    parser.add_argument('--u-cond-scale-depth', type=int, default=2, help='unshared conditional scale depth')
+    parser.add_argument('--rflow-scale-depth', type=int, default=16)
+    parser.add_argument('--tflow-scale-depth', type=int, default=16)
+    parser.add_argument('--u-cond-scale-depth', type=int, default=8, help='unshared conditional scale depth')
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')
     
@@ -150,8 +150,8 @@ if __name__ == '__main__':
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
     ##settings for the SimpleConvNet architecture
-    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=128, help='c_hidden=c_hidden_factor*in_channels')
-    parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
+    parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=32, help='c_hidden=c_hidden_factor*in_channels')
     ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
     parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
@@ -168,6 +168,9 @@ if __name__ == '__main__':
                                                                         By default, min and max are computed from the tensor.')
     parser.add_argument('--sample-scale-each', default=False, action='store_true', help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample-pad-value', type=int, default=0)
+
+    #Loss function constant factors:
+    parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')
     
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
