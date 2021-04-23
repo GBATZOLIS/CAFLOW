@@ -41,6 +41,7 @@ class CAFlow(pl.LightningModule):
         self.sample_norm_range = opts.sample_norm_range #tuple range
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
+        self.sampling_temperatures = opts.sampling_temperatures #list of sampling temperatures
 
         self.model = nn.ModuleDict()
 
@@ -145,25 +146,26 @@ class CAFlow(pl.LightningModule):
             for i in range(B):
                 all_images[i*raw_length] = Y[i]
                 all_images[(i+1)*raw_length-1] = I[i]
+            
+            for sampling_T in self.sampling_temperatures:
+                # generate images
+                with torch.no_grad():
+                    for j in range(1, self.num_val_samples+1):
+                        sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
+                        for i in range(B):
+                            all_images[i*raw_length+j]=sampled_image[i]
                 
-            # generate images
-            with torch.no_grad():
-                for j in range(1, self.num_val_samples+1):
-                    sampled_image = self.sample(Y, shortcut=self.val_shortcut)
-                    for i in range(B):
-                        all_images[i*raw_length+j]=sampled_image[i]
-               
-            grid = torchvision.utils.make_grid(
-                tensor=all_images,
-                nrow = raw_length, #Number of images displayed in each row of the grid
-                padding=self.sample_padding,
-                normalize=self.sample_normalize,
-                range=self.sample_norm_range,
-                scale_each=self.sample_scale_each,
-                pad_value=self.sample_pad_value,
-            )
-            str_title = 'val_samples_epoch_%d__batch_%d' % (self.current_epoch, batch_idx)
-            self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+                grid = torchvision.utils.make_grid(
+                    tensor=all_images,
+                    nrow = raw_length, #Number of images displayed in each row of the grid
+                    padding=self.sample_padding,
+                    normalize=self.sample_normalize,
+                    range=self.sample_norm_range,
+                    scale_each=self.sample_scale_each,
+                    pad_value=self.sample_pad_value,
+                )
+                str_title = 'val_samples_epoch_%d_T_%.2f' % (self.current_epoch, sampling_T)
+                self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
     def configure_optimizers(self,):
         def scheduler_lambda_function(s):
@@ -184,7 +186,7 @@ class CAFlow(pl.LightningModule):
         return [optimizer], [scheduler]
     
     #@torch.no_grad()
-    def sample(self, Y, shortcut=True, xtreme_shortcut=False):
+    def sample(self, Y, shortcut=True, xtreme_shortcut=False, T=1):
         D, _, _ =self.model['rflow'](y=Y) #D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
 
         #Use shape of D[0] to calculate dynamically the shapes of sampled tensors of the conditional flows. # this should be changed for super-resolution.
@@ -194,7 +196,7 @@ class CAFlow(pl.LightningModule):
         init_channels = D[0].shape[1]
 
         if not shortcut and not xtreme_shortcut:
-            z_normal = self.generate_z_cond(D[0], shortcut=False)
+            z_normal = self.generate_z_cond(D[0], shortcut=False, T=T)
             if self.shared:
                 L_pred, _ = self.model['SharedConditionalFlow'](L=[], z=z_normal, D=D, reverse=True, shortcut=False)
             else:
@@ -203,19 +205,19 @@ class CAFlow(pl.LightningModule):
             return I_sample
 
         elif shortcut and not xtreme_shortcut:
-            z_short = self.generate_z_cond(D[0], shortcut=True)
+            z_short = self.generate_z_cond(D[0], shortcut=True, T=T)
             L_pred_short, _ = self.model['SharedConditionalFlow'](L=[], z=z_short, D=D, reverse=True, shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             return I_sample
         
         elif shortcut and xtreme_shortcut:
-            z_xtreme_short = self.generate_z_cond(D[0], shortcut=True, xtreme_shortcut=True)
+            z_xtreme_short = self.generate_z_cond(D[0], shortcut=True, xtreme_shortcut=True, T=T)
             L_pred_short, _ = self.model['SharedConditionalFlow'](L=[], z=z_xtreme_short, D=D, reverse=True, shortcut=True, xtreme_shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             
             return I_sample
 
-    def generate_z_cond(self, D0, shortcut, xtreme_shortcut=False):
+    def generate_z_cond(self, D0, shortcut, xtreme_shortcut=False, T=1):
         """Generates the sampled tensors for the conditional flows"""
         # D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
         # The sampled tensors for the shared conditional flows are the following:
@@ -239,20 +241,20 @@ class CAFlow(pl.LightningModule):
                     right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
                     if scale == 0:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        z_I.append(T*self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
                     else:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
-                        concat_z_S = self.prior.sample(sample_shape=crop_left_shape).type_as(D0)
+                        z_I.append(T*self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        concat_z_S = T*self.prior.sample(sample_shape=crop_left_shape).type_as(D0)
                         z_S.append(concat_z_S)
                         
                 elif scale == self.scales-1: #last scale
                     right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
+                    z_I.append(T*self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
 
                     right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
-                    concat_z_S = self.prior.sample(sample_shape=crop_left_shape_S).type_as(D0)
+                    concat_z_S = T*self.prior.sample(sample_shape=crop_left_shape_S).type_as(D0)
                     z_S.append(concat_z_S)
             
             z_xtreme_short = [z_I, z_S]
@@ -263,20 +265,20 @@ class CAFlow(pl.LightningModule):
                     right_shape = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape = (batch_size, 2**(self.dim-1)*right_shape[1])+tuple([x//2 for x in right_shape[2:]])
                     if scale == 0:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        z_I.append(T*self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
                     else:
-                        z_I.append(self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
-                        concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:]).type_as(D0)
+                        z_I.append(T*self.prior.sample(sample_shape=crop_left_shape).type_as(D0))
+                        concat_z_S = T*self.prior.sample(sample_shape=tuple([scale*crop_left_shape[0],])+crop_left_shape[1:]).type_as(D0)
                         z_S.append(concat_z_S)
                         
                 elif scale == self.scales-1: #last scale
                     right_shape_I = (batch_size, 2**((self.dim-1)*(scale-1))*2**self.dim*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_I = (batch_size, 2**self.dim*right_shape_I[1])+tuple([x//2 for x in right_shape_I[2:]])
-                    z_I.append(self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
+                    z_I.append(T*self.prior.sample(sample_shape=crop_left_shape_I).type_as(D0))
 
                     right_shape_S = (batch_size, 2**((self.dim-1)*scale)*init_channels)+tuple([x//2**scale for x in init_res])
                     crop_left_shape_S = (batch_size, 2**self.dim*right_shape_S[1])+tuple([x//2 for x in right_shape_S[2:]])
-                    concat_z_S = self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:]).type_as(D0)
+                    concat_z_S = T*self.prior.sample(sample_shape=tuple([scale*crop_left_shape_S[0],])+crop_left_shape_S[1:]).type_as(D0)
                     z_S.append(concat_z_S)
             
             z_short = [z_I, z_S]

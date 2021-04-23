@@ -168,6 +168,7 @@ if __name__ == '__main__':
                                                                         By default, min and max are computed from the tensor.')
     parser.add_argument('--sample-scale-each', default=False, action='store_true', help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample-pad-value', type=int, default=0)
+    parser.add_argument('--sampling_temperatures', type=list, default=[1, 0.97, 0.8], help='List of sampling temperatures in the validation process.')
 
     #Loss function constant factors:
     parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')
