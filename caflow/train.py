@@ -139,8 +139,8 @@ if __name__ == '__main__':
     parser.add_argument('--rflow-scale-depth', type=int, default=16)
     parser.add_argument('--tflow-scale-depth', type=int, default=16)
     parser.add_argument('--u-cond-scale-depth', type=int, default=8, help='unshared conditional scale depth')
-    parser.add_argument('--s-cond-s-scale-depth', type=int, default=4, help='shared conditional shared scale depth')
-    parser.add_argument('--s-cond-u-scale-depth', type=int, default=4, help='shared conditional unshared scale depth')
+    parser.add_argument('--s-cond-s-scale-depth', type=int, default=12, help='shared conditional shared scale depth')
+    parser.add_argument('--s-cond-u-scale-depth', type=int, default=16, help='shared conditional unshared scale depth')
     
     parser.add_argument('--vardeq-depth', type=int, default=0, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
