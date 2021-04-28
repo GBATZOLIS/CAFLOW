@@ -125,5 +125,5 @@ class UnsharedConditionalFlow(nn.Module):
                 L.append(h_pass)
 
         #L=[L_0, L_1,...,L_{n-1}]
-        L=L[::-1] #we need to invert L because the subsequent unconditinal flow exptects the inverted order
+        L=L[::-1] #we need to invert L because the subsequent unconditinal flow expects the inverted order
         return L, logdet

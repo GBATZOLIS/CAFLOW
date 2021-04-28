@@ -186,17 +186,17 @@ class CAFlow(pl.LightningModule):
         return [optimizer], [scheduler]
     
     #@torch.no_grad()
-    def sample(self, Y, shortcut=True, xtreme_shortcut=False, T=1):
+    def sample(self, Y, shortcut=True, xtreme_shortcut=False, T=1, temperature_list=None):
         D, _, _ =self.model['rflow'](y=Y) #D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
 
         #Use shape of D[0] to calculate dynamically the shapes of sampled tensors of the conditional flows. # this should be changed for super-resolution.
         #base_shape = D[0].shape #(batchsize, 2*(dim-1)*self.channels, init_res/2, init_res/2, init_res/2)
-        batch_size = D[0].shape[0]
-        init_res = D[0].shape[2:]
-        init_channels = D[0].shape[1]
+        #batch_size = D[0].shape[0]
+        #init_res = D[0].shape[2:]
+        #init_channels = D[0].shape[1]
 
         if not shortcut and not xtreme_shortcut:
-            z_normal = self.generate_z_cond(D[0], shortcut=False, T=T)
+            z_normal = self.generate_z_cond(D[0], shortcut=False, T=T, temperature_list=temperature_list)
             if self.shared:
                 L_pred, _ = self.model['SharedConditionalFlow'](L=[], z=z_normal, D=D, reverse=True, shortcut=False)
             else:
@@ -205,7 +205,7 @@ class CAFlow(pl.LightningModule):
             return I_sample
 
         elif shortcut and not xtreme_shortcut:
-            z_short = self.generate_z_cond(D[0], shortcut=True, T=T)
+            z_short = self.generate_z_cond(D[0], shortcut=True, T=T, temperature_list=temperature_list)
             L_pred_short, _ = self.model['SharedConditionalFlow'](L=[], z=z_short, D=D, reverse=True, shortcut=True)
             I_sample, logdet = self.model['tflow'](z=L_pred_short, reverse=True)
             return I_sample
@@ -217,7 +217,7 @@ class CAFlow(pl.LightningModule):
             
             return I_sample
 
-    def generate_z_cond(self, D0, shortcut, xtreme_shortcut=False, T=1):
+    def generate_z_cond(self, D0, shortcut, xtreme_shortcut=False, T=1, temperature_list=None):
         """Generates the sampled tensors for the conditional flows"""
         # D = [D_(n-1), D_(n-2), ..., D_2, D_1, D_0]
         # The sampled tensors for the shared conditional flows are the following:
@@ -284,10 +284,31 @@ class CAFlow(pl.LightningModule):
             z_short = [z_I, z_S]
         
             if shortcut:
+                if temperature_list is not None:
+                    z_normal = self.convert_shortcut_to_normal(z_short)
+                    z_normal = self.apply_temperature_per_scale(z_normal, temperature_list)
+                    z_short = self.convert_normal_to_shortcut(z_normal)  
+                
                 return z_short
             else:
-                return self.convert_shortcut_to_normal(z_short)
+                z_normal = self.convert_shortcut_to_normal(z_short)
+                if temperature_list is not None:
+                    z_normal = self.apply_temperature_per_scale(z_normal, temperature_list)
+                
+                return z_normal
 
+    def apply_temperature_per_scale(self, z_normal, temperature_list):
+        assert len(z_normal) == len(temperature_list), 'Temperature list should contain as many elements as the number of scales.'
+        num_scales = len(z_normal)
+        z_temp_scaled = []
+        for i in range(num_scales):
+            assert len(z_normal[i])==num_scales-i, 'The order of the latents is reversed.'
+            scale_temperature = temperature_list[i]
+            z_flow_i = [latent*scale_temperature for latent in z_normal[i]]
+            z_temp_scaled.append(z_flow_i)
+        
+        return z_temp_scaled
+        
     def convert_shortcut_to_normal(self, z_short):
         z_I = z_short[0]
         z_S = z_short[1]
