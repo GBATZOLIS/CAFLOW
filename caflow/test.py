@@ -11,9 +11,9 @@ import torch
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
     B = Y.shape[0]
+    raw_length = 1+num_samples+1
     all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
     
-    raw_length = 1+num_samples+1
     for i in range(B):
         all_images[i*raw_length] = Y[i]
         all_images[(i+1)*raw_length-1] = I[i]
