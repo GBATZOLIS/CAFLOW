@@ -10,10 +10,10 @@ import torchvision
 import torch
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
-    raw_length = 1+num_samples+1
+    B = Y.shape[0]
     all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
     
-    B = Y.shape[0]
+    raw_length = 1+num_samples+1
     for i in range(B):
         all_images[i*raw_length] = Y[i]
         all_images[(i+1)*raw_length-1] = I[i]
@@ -41,11 +41,11 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
-    val_dataset = TemplateDataset(hparams, phase='val', domain='end-to-end')
+    val_dataset = TemplateDataset(hparams, phase='val')
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
 
-    device = torch.device('cuda:%d' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
+    device = torch.device('cuda:%s' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
 
     log_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
     model = CAFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(log_dir, 'checkpoints', '*.ckpt'))[0]).to(device)
