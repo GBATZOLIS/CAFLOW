@@ -11,7 +11,7 @@ import torch
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
     raw_length = 1+num_samples+1
-    all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
+    all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
     
     B = Y.shape[0]
     for i in range(B):
@@ -20,7 +20,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
             
     # generate images
     for j in range(1, num_samples+1):
-        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
+        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
         for i in range(B):
             all_images[i*raw_length+j]=sampled_image[i]
                 
@@ -45,13 +45,15 @@ def main(hparams):
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
 
+    device = torch.device('cuda:%d' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
+
     log_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
-    model = CAFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(log_dir, 'checkpoints', '*.ckpt'))[0])
+    model = CAFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(log_dir, 'checkpoints', '*.ckpt'))[0]).to(device)
     model.eval()
 
     writer = SummaryWriter(log_dir=log_dir, comment='testing')
 
-    temperature_lists = [[1, 1, 1, 1],\
+    temperature_lists = [[1, 1, 1, 1],
                          [1, 1, 1, 0.75],
                          [1, 1, 0.75, 0.75],
                          [1, 0.75, 0.75, 0.75],
@@ -62,7 +64,8 @@ def main(hparams):
 
     for temperature_list in temperature_lists:
         for step, (x,y) in enumerate(val_dataloader):
-            if step>0:
+            x, y = x.to(device), y.to(device)
+            if step > 0:
                 continue
             draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step)
     
@@ -71,6 +74,7 @@ def main(hparams):
 if __name__ == '__main__':
     parser = ArgumentParser()
 
+    parser.add_argument('--gpus', default=None)
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
     parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
@@ -84,5 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', type=int, default=0, help='which experiment to test.')
     parser.add_argument('--num-samples', type=int, default=8, help='num of samples to generate in testing.')
 
+    args = parser.parse_args()
 
+    main(args)
     
