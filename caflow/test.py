@@ -8,6 +8,7 @@ import glob
 from argparse import ArgumentParser
 import torchvision
 import torch
+from tqdm import tqdm
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
     B = Y.shape[0]
@@ -62,7 +63,7 @@ def main(hparams):
                          [0.4, 0.6, 0.8, 1]
                          ]   
 
-    for temperature_list in temperature_lists:
+    for temperature_list in tqdm(temperature_lists):
         for step, (x,y) in enumerate(val_dataloader):
             x, y = x.to(device), y.to(device)
             if step > 0:
