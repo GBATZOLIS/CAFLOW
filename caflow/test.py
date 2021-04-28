@@ -70,21 +70,22 @@ def main(hparams):
                          [0.5, 0.5, 0.5, 0.5],
                          [0.25, 0.25, 0.25, 0.25],
                          [0.1, 0.1, 0.1, 0.1],
-                         [0.01, 0.01, 0.01, 0.01]
-                         ]   
-    '''
-
-    temperature_lists = [[0.65, 0.7, 0.75, 0.8],
+                         [0.01, 0.01, 0.01, 0.01],
+                         [0.65, 0.7, 0.75, 0.8],
                          [0.70, 0.75, 0.8, 0.85],
                          [0.75, 0.8, 0.85, 0.9],
                          [0.8, 0.85, 0.9, 0.95]
                          ]   
+    '''
+
+    temperature_lists = [[0.75, 0.75, 0.75, 0.75]
+                         ]   
 
     for temperature_list in tqdm(temperature_lists):
-        for step, (x,y) in enumerate(val_dataloader):
+        for step, (x,y) in tqdm(enumerate(val_dataloader)):
             x, y = x.to(device), y.to(device)
-            if step > 0:
-                continue
+            #if step > 0:
+            #    continue
             draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step)
     
     writer.close()
