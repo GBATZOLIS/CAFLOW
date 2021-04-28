@@ -54,6 +54,7 @@ def main(hparams):
 
     writer = SummaryWriter(log_dir=log_dir, comment='testing')
 
+    '''
     temperature_lists = [[1, 1, 1, 1],
                          [1, 1, 1, 0.75],
                          [1, 1, 0.75, 0.75],
@@ -61,6 +62,18 @@ def main(hparams):
                          [0.75, 0.75, 0.75, 0.75],
                          [1, 0.8, 0.6, 0.4],
                          [0.4, 0.6, 0.8, 1]
+                         ]   
+    '''
+
+    temperature_lists = [[1, 1, 1, 1],
+                         [0.75, 1, 1, 1],
+                         [0.75, 0.75, 1, 1],
+                         [0.75, 0.75, 0.75, 1],
+                         [0.75, 0.75, 0.75, 0.75],
+                         [0.5, 0.5, 0.5, 0.5],
+                         [0.25, 0.25, 0.25, 0.25],
+                         [0.1, 0.1, 0.1, 0.1],
+                         [0.01, 0.01, 0.01, 0.01]
                          ]   
 
     for temperature_list in tqdm(temperature_lists):
