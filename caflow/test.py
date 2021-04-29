@@ -78,7 +78,7 @@ def main(hparams):
                          ]   
     '''
 
-    temperature_lists = [[0.75, 0.75, 0.75, 0.75]
+    temperature_lists = [[0.95, 0.95, 0.95, 0.95]
                          ]   
 
     for temperature_list in tqdm(temperature_lists):

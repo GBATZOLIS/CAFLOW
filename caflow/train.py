@@ -15,6 +15,7 @@ from caflow.data.template_dataset import TemplateDataset
 from caflow.models.CAFlow import CAFlow
 from caflow.models.UFlow import UFlow
 from caflow.data.create_dataset import create_dataset
+from caflow.utils.EMACallback import EMACallback
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import LearningRateMonitor
@@ -31,11 +32,13 @@ def main(hparams):
         val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
         model = UFlow(hparams)
+        callbacks = [EarlyStopping('val_loss', patience=100), LearningRateMonitor()]
+        if hparams.use_ema: callbacks.extend([EMACallback()])
         trainer = Trainer(num_nodes=hparams.num_nodes, gradient_clip_val=hparams.gradient_clip_val, \
                           gpus=hparams.gpus, accelerator=hparams.accelerator, \
                           accumulate_grad_batches=hparams.accumulate_grad_batches, \
                           resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps, 
-                          callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
+                          callbacks=callbacks)
         trainer.fit(model, train_dataloader, val_dataloader)
         
     elif hparams.pretrain in ['end-to-end', 'conditional']:
@@ -48,11 +51,14 @@ def main(hparams):
                                     num_workers=hparams.val_workers)
         
         model = CAFlow(hparams)
+        callbacks = [EarlyStopping('val_loss', patience=100), LearningRateMonitor()]
+        if hparams.use_ema: callbacks.extend([EMACallback()])
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                         accumulate_grad_batches=hparams.accumulate_grad_batches, \
                         resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
-                        callbacks=[EarlyStopping('val_loss', patience=100), LearningRateMonitor()])
+                        callbacks=callbacks)
         trainer.fit(model, train_dataloader, val_dataloader)
+
     elif hparams.pretrain == 'finetuning':
         train_dataset = TemplateDataset(hparams, phase='train')
         train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
@@ -106,6 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type=str, default='end-to-end', help='which part of the model to pretrain. Default: end-to-end. Options=[end-to-end, conditional, A, B]')
     parser.add_argument('--rflow-checkpoint', type=str, default=None)
     parser.add_argument('--tflow-checkpoint', type=str, default=None)
+    
     # finetuning settings
     parser.add_argument('--finetuning-checkpoint', type=str, default=None)
     parser.add_argument('--finetuning-lr', type=float, default=1e-4, help='Starting learning rate of the finetuner')
@@ -126,7 +133,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-warm-up', type=bool, default=True)
     parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
-
+    parser.add_argument('--use-ema', type=bool, default=True, help='whether to use exponential moving average for the model parameters.')
+    
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
     parser.add_argument('--data-channels', type=int, default=3)
@@ -149,10 +157,10 @@ if __name__ == '__main__':
     #Architecture (coupling layer type, NN which parameterises the coupling layer etc.)
     parser.add_argument('--coupling-type', type=str, default='Affine', help='Type of coupling layer. Options=[Affine, MixLog]')
     parser.add_argument('--nn-type', type=str, default='SimpleConvNet', help='nn architecture for the coupling layers. Options=[SimpleConvNet, nnflowpp]')
-    ##settings for the SimpleConvNet architecture
+        ##settings for the SimpleConvNet architecture
     parser.add_argument('--UFLOW-c-hidden-factor', type=int, default=64, help='c_hidden=c_hidden_factor*in_channels')
     parser.add_argument('--CAFLOW-c-hidden-factor', type=int, default=32, help='c_hidden=c_hidden_factor*in_channels')
-    ##->settings for the flow++ architecture
+        ##->settings for the flow++ architecture
     parser.add_argument('--drop-prob', type=float, default=0., help='Dropout probability')
     parser.add_argument('--num-blocks', default=1, type=int, help='Number of blocks in Flow++')
     parser.add_argument('--num-components', default=4, type=int, help='Number of components in the mixture')
@@ -168,7 +176,7 @@ if __name__ == '__main__':
                                                                         By default, min and max are computed from the tensor.')
     parser.add_argument('--sample-scale-each', default=False, action='store_true', help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample-pad-value', type=int, default=0)
-    parser.add_argument('--sampling_temperatures', type=list, default=[1, 0.97, 0.8], help='List of sampling temperatures in the validation process.')
+    parser.add_argument('--sampling_temperatures', type=list, default=[1, 0.9, 0.8], help='List of sampling temperatures in the validation process.')
 
     #Loss function constant factors:
     parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')
