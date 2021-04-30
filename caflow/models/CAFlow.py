@@ -10,7 +10,7 @@ from caflow.models.modules.mri_to_pet.UnconditionalFlow import UnconditionalFlow
 from caflow.models.modules.mri_to_pet.SharedConditionalFlow import SharedConditionalFlow
 from caflow.models.modules.mri_to_pet.UnsharedConditionalFlow import UnsharedConditionalFlow
 from caflow.models.UFlow import UFlow
-from torch_ema import ExponentialMovingAverage
+from caflow.utils.ExponentialMovingAverage import ExponentialMovingAverage
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
