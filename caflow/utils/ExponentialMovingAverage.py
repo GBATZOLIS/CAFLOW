@@ -105,6 +105,7 @@ class ExponentialMovingAverage:
             initialized will be used.
         """
         parameters = self._get_parameters(parameters)
+        parameters = [p for p in parameters if p.requires_grad]
         for s_param, param in zip(self.shadow_params, parameters):
             if param.requires_grad:
                 param.data.copy_(s_param.data)
@@ -142,6 +143,7 @@ class ExponentialMovingAverage:
             initialized will be used.
         """
         parameters = self._get_parameters(parameters)
+        parameters = [p for p in parameters if p.requires_grad]
         for c_param, param in zip(self.collected_params, parameters):
             if param.requires_grad:
                 param.data.copy_(c_param.data)
