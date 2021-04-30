@@ -133,7 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('--use-warm-up', type=bool, default=True)
     parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
-    parser.add_argument('--use-ema', type=bool, default=True, help='whether to use exponential moving average for the model parameters.')
+    parser.add_argument('--use-ema', default=False, action='store_true', help='whether to use exponential moving average for the model parameters.')
     
     #model specific arguments
     parser.add_argument('--data-dim', type=int, default=2)
