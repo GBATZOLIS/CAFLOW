@@ -173,11 +173,6 @@ class CAFlow(pl.LightningModule):
                 str_title = 'val_samples_epoch_%d_T_%.2f' % (self.current_epoch, sampling_T)
                 self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
-    def optimizer_step(self, *args, **kwargs):
-        super().optimizer_step(*args, **kwargs)
-        if self.use_ema:
-            self.ema.update(self.parameters())
-
     def configure_optimizers(self,):
         def scheduler_lambda_function(s):
             #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
