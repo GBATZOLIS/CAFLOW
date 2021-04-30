@@ -10,7 +10,6 @@ from caflow.models.modules.mri_to_pet.UnconditionalFlow import UnconditionalFlow
 from caflow.models.modules.mri_to_pet.SharedConditionalFlow import SharedConditionalFlow
 from caflow.models.modules.mri_to_pet.UnsharedConditionalFlow import UnsharedConditionalFlow
 from caflow.models.UFlow import UFlow
-from caflow.utils.ExponentialMovingAverage import ExponentialMovingAverage
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
@@ -90,11 +89,7 @@ class CAFlow(pl.LightningModule):
         self.warm_up = opts.warm_up
         self.gamma = opts.gamma
         self.use_ema = opts.use_ema
-
-        if self.use_ema:
-            self.ema = ExponentialMovingAverage(self.parameters(), decay=0.999)
-
-
+        
     def create_nn_settings(self, opts):
         nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.CAFLOW_c_hidden_factor, \
             'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\

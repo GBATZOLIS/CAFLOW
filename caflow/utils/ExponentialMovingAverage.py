@@ -32,9 +32,8 @@ class ExponentialMovingAverage:
         self.decay = decay
         self.num_updates = 0 if use_num_updates else None
         parameters = list(parameters)
-        #self.shadow_params = [p.clone().detach()
-        #                      for p in parameters if p.requires_grad]
-        self.shadow_params = [p.clone() for p in parameters if p.requires_grad]
+        self.shadow_params = [p.clone().detach()
+                              for p in parameters if p.requires_grad]
         self.collected_params = []
         # By maintaining only a weakref to each parameter,
         # we maintain the old GC behaviour of ExponentialMovingAverage:
