@@ -13,8 +13,9 @@ from caflow.data.aligned_dataset import AlignedDataset
 from caflow.data.image_folder import make_dataset
 from caflow.data.image_folder import is_image_file
 import os
+import numpy as np
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='bicycleGAN'):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -22,29 +23,63 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
         for phase in phases_to_create:
             print('Create {} dataset'.format(phase))
             data_paths = make_dataset(os.path.join(master_path, phase))
-            for i in range(min(dataset_size, len(data_paths))):
-                if (i+1) % 1000 == 0:
-                    print(i+1)
-                AB_path = data_paths[i]
-                basename = os.path.basename(AB_path)
-                
-                # read, crop, resize, save
-                
-                # read
-                AB = Image.open(AB_path).convert('RGB')
-                # crop
-                w, h = AB.size
-                w2 = int(w / 2)
-                A = AB.crop((0, 0, w2, h))
-                B = AB.crop((w2, 0, w, h))
-                # resize
-                if isinstance(resize_size, int):
-                    resize_size = (resize_size, resize_size)
-                A_resize = A.resize(resize_size, Image.BICUBIC)
-                B_resize = B.resize(resize_size, Image.BICUBIC)
-                # save
-                A_resize.save(os.path.join(master_path, phase, 'A', basename))
-                B_resize.save(os.path.join(master_path, phase, 'B', basename))
+            if dataset_style == 'bicycleGAN':
+                for i in range(min(dataset_size, len(data_paths))):
+                    if (i+1) % 1000 == 0:
+                        print(i+1)
+                    AB_path = data_paths[i]
+                    basename = os.path.basename(AB_path)
+                    
+                    # read, crop, resize, save
+                    
+                    # read
+                    AB = Image.open(AB_path).convert('RGB')
+                    # crop
+                    w, h = AB.size
+                    w2 = int(w / 2)
+                    A = AB.crop((0, 0, w2, h))
+                    B = AB.crop((w2, 0, w, h))
+                    # resize
+                    if isinstance(resize_size, int):
+                        resize_size = (resize_size, resize_size)
+                    A_resize = A.resize(resize_size, Image.BICUBIC)
+                    B_resize = B.resize(resize_size, Image.BICUBIC)
+                    # save
+                    A_resize.save(os.path.join(master_path, phase, 'A', basename))
+                    B_resize.save(os.path.join(master_path, phase, 'B', basename))
+            else:
+                for i in range(min(dataset_size, len(data_paths))):
+                    if (i+1) % 1000 == 0:
+                        print(i+1)
+                    
+                    #------- read -------
+                    img_path = data_paths[i]
+                    basename = os.path.basename(img_path)
+                    img = Image.open(img_path).convert('RGB')
+                    # ----- resize -----
+                    if isinstance(resize_size, int):
+                        resize_size = (resize_size, resize_size)
+                    img_resized = img.resize(resize_size, Image.BICUBIC)
+                    A = img_resized.copy()
+                    B = img_resized
+                    #---- apply the mask ---
+                    mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*0.2))
+                    x1 = np.random.randint(0, resize_size[0]-mask_len)
+                    x2 = np.random.randint(0, resize_size[1]-mask_len)
+
+                    for i in range(mask_len):
+                        for j in range(mask_len):
+                            A.putpixel((x1+i, x2+j), (0,0,0))
+
+
+                    # ------ save ------
+                    A.save(os.path.join(master_path, phase, 'A', basename))
+                    B.save(os.path.join(master_path, phase, 'B', basename))
+                    
+
+                    
+
+
 
 def inspect_dataset(master_path, resize_size, dataset_size):
     info = {'train':{'A':{'count':0, 'names':[], 'size':None}, \

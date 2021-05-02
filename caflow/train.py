@@ -22,7 +22,8 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 import torch.optim as optim
 
 def main(hparams):
-    create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
+    create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
+                   dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style)
 
     if hparams.pretrain in ['A', 'B']:
         train_dataset = TemplateDataset(hparams, phase='train', domain=hparams.pretrain)
@@ -182,6 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')
     
     #program arguments
+    parser.add_argument('--dataset-style', default='BicycleGAN', help='identifier of the stored structure of the dataset')
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
     parser.add_argument('--train-batch', type=int, default=8, help='train batch size')
     parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
