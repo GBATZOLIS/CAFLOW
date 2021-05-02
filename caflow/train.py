@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     #Trainer arguments
     parser.add_argument('--resume-from-checkpoint', type=str, default=None, help='checkpoint to resume training')
-    parser.add_argument('--gpus', default=None)
+    parser.add_argument('--gpus', type=str, default=None)
     parser.add_argument('--num_nodes', type=int, default=1, help='Number of nodes. Default=1.')
     
     parser.add_argument('--accelerator', type=str, default=None, help='automatic pytorch lightning accelerator.')
