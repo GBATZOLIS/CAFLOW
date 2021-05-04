@@ -9,6 +9,8 @@ from argparse import ArgumentParser
 import torchvision
 import torch
 from tqdm import tqdm
+from caflow.models.UFlow import UFlow
+import numpy as np
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
     B = Y.shape[0]
@@ -39,6 +41,31 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, num_batch):
     str_title = 'valbatch_%d_epoch_%d_' % (num_batch, model.current_epoch)+temp_string
     writer.add_image(str_title, grid)
     writer.flush()
+
+def annealed_distribution_uflow(hparams):
+    device = torch.device('cuda:%s' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
+    log_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
+    model = UFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(log_dir, 'checkpoints', '*.ckpt'))[0]).to(device)
+    model.eval()
+
+    annealed_samples = model.sample_from_annealed_distribution(num_samples=hparams.num_samples, T=hparams.T, burn=hparams.burn)
+    print(annealed_samples.size()) 
+
+    writer = SummaryWriter(log_dir=log_dir, comment='annealed_distribution_samples')
+    grid = torchvision.utils.make_grid(
+                tensor = annealed_samples,
+                nrow = int(np.sqrt(hparams.num_samples)), #Number of images displayed in each row of the grid
+                padding=model.sample_padding,
+                normalize=model.sample_normalize,
+                range=model.sample_norm_range,
+                scale_each=model.sample_scale_each,
+                pad_value=model.sample_pad_value,
+            )
+    
+    str_title = 'annealed_distribution_samples_T_0.97'
+    writer.add_image(str_title, grid)
+    writer.flush()
+    writer.close()
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, dataset_size=hparams.max_dataset_size)
@@ -105,9 +132,11 @@ if __name__ == '__main__':
 
     # Testing
     parser.add_argument('--experiment', type=int, default=0, help='which experiment to test.')
-    parser.add_argument('--num-samples', type=int, default=8, help='num of samples to generate in testing.')
+    parser.add_argument('--num-samples', type=int, default=64, help='num of samples to generate in testing.')
+    parser.add_argument('--T', type=float, default=0.97, help='Annealing temperature.')
+    parser.add_argument('--burn', type=int, default=500, help='Burn-in time in NUTS algorithm.')
 
     args = parser.parse_args()
 
-    main(args)
+    annealed_distribution_uflow(args)
     

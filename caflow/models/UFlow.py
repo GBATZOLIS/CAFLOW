@@ -5,6 +5,7 @@ import torch
 import torch.optim as optim
 import torchvision
 import numpy as np
+import hamiltorch
 
 class UFlow(pl.LightningModule):
     def __init__(self, opts):
@@ -89,35 +90,55 @@ class UFlow(pl.LightningModule):
         str_title = 'val_samples_epoch_%d' % self.current_epoch
         self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
+    @torch.no_grad()
     def sample(self, num_samples):
         flattened_latents = self.prior.sample(sample_shape=(num_samples, self.total_dims)).to(self.device)
         scale_z = self.convert_to_scale_tensor(flattened_latents)
         y, _ = self.uflow(z=scale_z, reverse=True)
         return y
-
-    def sample_from_annealed_distribution(self, T=0.97, num_samples=1):
-        def log_prob(z):
-            assert z.size(0)==1, 'z must have shape of the form (1,...)'
-            scale_tensor = self.convert_to_scale_tensor(z)
-            y, logdet = self.uflow(z=scale_tensor, reverse=True)
-            return gamma*self.prior.log_prob(z).sum()+(1-gamma)*logdet.sum()
+        
+    #@torch.no_grad()
+    def sample_from_annealed_distribution(self, num_samples=1, T=0.97, burn = 500, L = 5):
+        class target_log_prob_func:
+            def __init__(self, trained_flow, convert_to_scale_tensor, gamma):
+                self.trained_flow = trained_flow
+                self.convert_to_scale_tensor = convert_to_scale_tensor
+                self.gamma = gamma
+            
+            def __call__(self, z):
+                assert len(z.shape)==1, 'z must have shape of the form (1,...)'
+                scale_tensor = self.convert_to_scale_tensor(z.unsqueeze(0))
+                y, logdet = self.trained_flow(z=scale_tensor, reverse=True)
+                return self.gamma*self.trained_flow.prior.log_prob(z).sum()+(1-gamma)*logdet.sum()
 
         gamma = 1.0/(T**2.0)
-        burn=500
+        burn = burn
         step_size = .3
-        L = 5
+        L = L
         N_nuts = burn + 1
+        z_annealed = []
         for _ in range(num_samples):
-            params_init = self.prior.sample(self.total_dims)
-            params_hmc_nuts = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init,
-                                                num_samples=N_nuts,step_size=step_size,num_steps_per_sample=L,
+            params_init = self.prior.sample((self.total_dims,))
+            params_hmc_nuts = hamiltorch.sample(log_prob_func=target_log_prob_func(self.uflow, self.convert_to_scale_tensor, gamma), params_init=params_init,
+                                                num_samples=N_nuts,step_size=step_size, num_steps_per_sample=L,
                                                 sampler=hamiltorch.Sampler.HMC_NUTS, burn=burn,
-                                                desired_accept_rate=0.8)
+                                                desired_accept_rate=0.8)                      
+            z_annealed.append(params_hmc_nuts[0])
+        
+        collated_z_annealed = torch.stack(z_annealed)
+        print(collated_z_annealed.size())
+        collated_z_annealed_scale_tensor = self.convert_to_scale_tensor(collated_z_annealed)
+        
+        with torch.no_grad():
+            y, _ = self.uflow(z=collated_z_annealed_scale_tensor, reverse=True)
+
+        return y
     
     def convert_to_scale_tensor(self, flattened_tensor):
         #input: flattened_tensor
         #output: z reshaped in a scale tensor - a list of number_scales tensors - [(batch, 2channels, res/2, res/2), (batch, 4channels, res/4, res/4)...]
-        batch_size = flattened_tensor.size(0)
+
+        batch_size = flattened_tensor.shape[0]
         previous_dimensions=0
         scale_tensor = []
         for i in range(1, self.scales+1):
@@ -129,6 +150,7 @@ class UFlow(pl.LightningModule):
             new_dimensions = np.prod(scale_shape)
             scale = torch.reshape(flattened_tensor[:, previous_dimensions:new_dimensions], shape=(batch_size,) + scale_shape)
             scale_tensor.append(scale)
+
         return scale_tensor
     
     def convert_to_flattened_tensor(self, scale_tensor):
@@ -140,9 +162,6 @@ class UFlow(pl.LightningModule):
         flattened_tensor = torch.cat(flattened_tensor, dim=1)
         return flattened_tensor
 
-
-
-    
     def configure_optimizers(self,):
         def scheduler_lambda_function(s):
             #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
