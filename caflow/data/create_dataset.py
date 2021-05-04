@@ -15,7 +15,7 @@ from caflow.data.image_folder import is_image_file
 import os
 import numpy as np
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='bicycleGAN'):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='bicycleGAN', mask_to_area=0.1):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -63,7 +63,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = img_resized.copy()
                     B = img_resized
                     #---- apply the mask ---
-                    mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*0.2))
+                    mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*mask_to_area))
                     x1 = np.random.randint(0, resize_size[0]-mask_len)
                     x2 = np.random.randint(0, resize_size[1]-mask_len)
 
