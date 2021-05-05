@@ -118,7 +118,7 @@ class UFlow(pl.LightningModule):
         N_nuts = burn + 1
         z_annealed = []
         for _ in range(num_samples):
-            params_init = self.prior.sample((self.total_dims,))
+            params_init = self.prior.sample((self.total_dims,)).to(self.device)
             params_hmc_nuts = hamiltorch.sample(log_prob_func=target_log_prob_func(self.uflow, self.convert_to_scale_tensor, gamma), params_init=params_init,
                                                 num_samples=N_nuts,step_size=step_size, num_steps_per_sample=L,
                                                 sampler=hamiltorch.Sampler.HMC_NUTS, burn=burn,
