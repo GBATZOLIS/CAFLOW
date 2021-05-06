@@ -112,10 +112,10 @@ class UFlow(pl.LightningModule):
                 return self.gamma*self.trained_flow.prior.log_prob(z).sum()+(1-self.gamma)*logdet.sum()
 
         gamma = 1.0/(T**2.0)
-        burn = 20
+        burn = 10
         step_size = 0.01
-        L = 100
-        N = 3
+        L = 30
+        N = 1
         N_nuts = burn + N
         z_annealed = []
         for _ in range(num_samples):
@@ -125,7 +125,7 @@ class UFlow(pl.LightningModule):
             params_hmc_nuts = hamiltorch.sample(log_prob_func=target_log_prob_func(self.uflow, self.convert_to_scale_tensor, gamma), params_init=params_init,
                                                 num_samples=N_nuts, step_size=step_size, num_steps_per_sample=L,
                                                 sampler=hamiltorch.Sampler.HMC_NUTS, burn=burn,
-                                                desired_accept_rate=0.2)
+                                                desired_accept_rate=0.6)
             
 
             '''

@@ -64,8 +64,10 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     B = img_resized
                     #---- apply the mask ---
                     mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*mask_to_area))
-                    x1 = np.random.randint(0, resize_size[0]-mask_len)
-                    x2 = np.random.randint(0, resize_size[1]-mask_len)
+                    window1 = int(0.1*resize_size[0])
+                    window2 = int(0.1*resize_size[1])
+                    x1 = np.random.randint(window1, resize_size[0]-mask_len-window1)
+                    x2 = np.random.randint(window2, resize_size[1]-mask_len-window2)
 
                     for i in range(mask_len):
                         for j in range(mask_len):
