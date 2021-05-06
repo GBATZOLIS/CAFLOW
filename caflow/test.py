@@ -54,7 +54,7 @@ def annealed_distribution_uflow(hparams):
     writer = SummaryWriter(log_dir=log_dir, comment='annealed_distribution_samples')
     grid = torchvision.utils.make_grid(
                 tensor = annealed_samples,
-                nrow = int(np.sqrt(hparams.num_samples)), #Number of images displayed in each row of the grid
+                nrow = int(np.sqrt(annealed_samples.size(0))), #Number of images displayed in each row of the grid
                 padding=model.sample_padding,
                 normalize=model.sample_normalize,
                 range=model.sample_norm_range,
@@ -62,7 +62,7 @@ def annealed_distribution_uflow(hparams):
                 pad_value=model.sample_pad_value,
             )
     
-    str_title = 'annealed_distribution_samples_T_0.97'
+    str_title = 'annealed_distribution_samples_T_%.3f' % hparams.T
     writer.add_image(str_title, grid)
     writer.flush()
     writer.close()
@@ -105,7 +105,9 @@ def main(hparams):
                          ]   
     '''
 
-    temperature_lists = [[0.95, 0.95, 0.95, 0.95]
+    temperature_lists = [[0.8, 0.8, 0.8, 0.8],
+                         [0.9, 0.9, 0.9, 0.9],
+                         [0.97, 0.97, 0.97, 0.97]
                          ]   
 
     for temperature_list in tqdm(temperature_lists):
@@ -138,5 +140,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    annealed_distribution_uflow(args)
+    main(args)
+    #annealed_distribution_uflow(args)
     

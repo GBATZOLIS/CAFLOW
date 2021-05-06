@@ -109,21 +109,33 @@ class UFlow(pl.LightningModule):
                 assert len(z.shape)==1, 'z must have shape of the form (1,...)'
                 scale_tensor = self.convert_to_scale_tensor(z.unsqueeze(0))
                 y, logdet = self.trained_flow(z=scale_tensor, reverse=True)
-                return self.gamma*self.trained_flow.prior.log_prob(z).sum()+(1-gamma)*logdet.sum()
+                return self.gamma*self.trained_flow.prior.log_prob(z).sum()+(1-self.gamma)*logdet.sum()
 
         gamma = 1.0/(T**2.0)
-        burn = burn
-        step_size = .3
-        L = L
-        N_nuts = burn + 1
+        burn = 20
+        step_size = 0.01
+        L = 100
+        N = 3
+        N_nuts = burn + N
         z_annealed = []
         for _ in range(num_samples):
-            params_init = self.prior.sample((self.total_dims,)).to(self.device)
+            params_init = T*self.prior.sample((self.total_dims,)).to(self.device)
+            z_annealed.append(params_init)
+            
             params_hmc_nuts = hamiltorch.sample(log_prob_func=target_log_prob_func(self.uflow, self.convert_to_scale_tensor, gamma), params_init=params_init,
-                                                num_samples=N_nuts,step_size=step_size, num_steps_per_sample=L,
+                                                num_samples=N_nuts, step_size=step_size, num_steps_per_sample=L,
                                                 sampler=hamiltorch.Sampler.HMC_NUTS, burn=burn,
-                                                desired_accept_rate=0.8)                      
-            z_annealed.append(params_hmc_nuts[0])
+                                                desired_accept_rate=0.2)
+            
+
+            '''
+            params_hmc_nuts = hamiltorch.sample(log_prob_func=target_log_prob_func(self.uflow, self.convert_to_scale_tensor, gamma), 
+                                                params_init=params_init, num_samples=N, step_size=step_size, num_steps_per_sample=L)
+            '''
+
+
+            #z_annealed.append(params_hmc_nuts[-1])
+            z_annealed.extend(params_hmc_nuts)
         
         collated_z_annealed = torch.stack(z_annealed)
         print(collated_z_annealed.size())
