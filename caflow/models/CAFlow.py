@@ -81,8 +81,11 @@ class CAFlow(pl.LightningModule):
 
         #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
+
         #loss function settings
         self.lamda = opts.lamda
+        self.lambda_rec = opts.lambda_rec
+
         #optimiser settings
         self.learning_rate = opts.learning_rate
         self.use_warm_up = opts.use_warm_up
@@ -113,14 +116,32 @@ class CAFlow(pl.LightningModule):
         if scaled:
             #scaled_logjoint = logjoint*np.log2(np.exp(1))/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
             scaled_logjoint = logjoint/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
-            return scaled_logjoint
+            return scaled_logjoint, [D, Z_cond]
         else:
-            return logjoint
+            return logjoint, [D, Z_cond]
     
     def training_step(self, batch, batch_idx):
         Y, I = batch
-        neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.train_shortcut, scaled=True))
-        loss = neg_avg_scaled_logjoint
+        scaled_logjoint, encodings = self.logjoint(Y, I, shortcut=self.train_shortcut, scaled=True)
+        neg_avg_scaled_logjoint = -1*torch.mean(scaled_logjoint)
+
+        if self.lambda_rec is not None:
+            D, z_cond = encodings[0], encodings[1]
+            z_normal = self.generate_z_cond(D[0], shortcut=False)
+
+            #print('z_normal[-1], ', z_normal[-1])
+            #print('z_cond[-1], ', z_cond[-1])
+            assert len(z_normal[-1])==len(z_cond[-1])==1
+            z_normal[-1][0] = z_cond[-1][0].clone()
+            del z_cond
+
+            L_pred, _ = self.model['UnsharedConditionalFlow'](L=[], z=z_normal, D=D, reverse=True)
+            I_rec, _ = self.model['tflow'](z=L_pred, reverse=True)
+            train_rec_loss = torch.mean(torch.abs(I-I_rec))
+            self.log('train_rec_loss', train_rec_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            loss = neg_avg_scaled_logjoint + self.lambda_rec * train_rec_loss
+        else:
+            loss = neg_avg_scaled_logjoint
         
         #logging
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -131,7 +152,7 @@ class CAFlow(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         Y, I = batch
-        neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.val_shortcut, scaled=True))
+        neg_avg_scaled_logjoint = -1*torch.mean(self.logjoint(Y, I, shortcut=self.val_shortcut, scaled=True)[0])
         val_loss = neg_avg_scaled_logjoint
         self.log('val_loss', val_loss, on_step=True, on_epoch=True, sync_dist=True)
         
@@ -318,7 +339,7 @@ class CAFlow(pl.LightningModule):
         z = []
         for i in range(n):
             iflow = []
-            iflow.append(z_short[0][i])
+            iflow.append(z_I[i])
             z.append(iflow)
         
         for i in range(1, n):

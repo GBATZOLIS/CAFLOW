@@ -181,6 +181,8 @@ if __name__ == '__main__':
 
     #Loss function constant factors:
     parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')
+    parser.add_argument('--lambda-rec', default=1e-3, type=float, help='Constant factor multiplied by the train reconstruction loss. \
+                                    (The bigger the value of lambda-rect the bigger the imposed dependency on the conditioning image??')
     
     #program arguments
     parser.add_argument('--dataset-style', default='BicycleGAN', help='identifier of the stored structure of the dataset')

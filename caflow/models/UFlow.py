@@ -146,6 +146,22 @@ class UFlow(pl.LightningModule):
 
         return y
     
+    def resample_scale_tensor(self, scale_tensor, scales_to_resample=[1, 2, 3]):
+        batch_size = scale_tensor[0].size(0)
+        resampled_scale_tensor = []
+        for i in range(1, self.scales+1):
+            if i not in scales_to_resample:
+                resampled_scale_tensor.append(scale_tensor[i-1])
+            else:
+                if i<self.scales:
+                    scale_shape = (2**(i*(self.dim-1))*self.channels, ) + tuple([x//2**i for x in self.resolution])
+                elif i==self.scales: #last scale has the same dimensionality as the pre-last just squeezed by a factor of 2.
+                    scale_shape = (2**((i-1)*(self.dim-1)+self.dim)*self.channels, )+tuple([x//2**i for x in self.resolution])
+                
+                resampled_scale_tensor.append(self.prior.sample(sample_shape=(batch_size,)+scale_shape).type_as(scale_tensor[0]))
+        
+        return resampled_scale_tensor
+
     def convert_to_scale_tensor(self, flattened_tensor):
         #input: flattened_tensor
         #output: z reshaped in a scale tensor - a list of number_scales tensors - [(batch, 2channels, res/2, res/2), (batch, 4channels, res/4, res/4)...]

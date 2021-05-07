@@ -64,33 +64,34 @@ class UnsharedConditionalFlow(nn.Module):
         
     def encode(self, L, D, logdet):
         logprob = 0.
-        #z=[]
+        z=[]
         for i in range(self.scales):
-            #z_horizontal=[]                
+            z_horizontal=[]                
             if i==self.scales-1:
                 h_split, logdet = self.scale_flows[i][0](L[i], D[i], logdet, reverse=False)
                 logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                #z_horizontal.append(h_split)
+                z_horizontal.append(h_split)
             else:
                 h_pass, logdet = self.scale_flows[i][0](L[i], D[i], logdet, reverse=False)
                 h_split, h_pass = h_pass.chunk(2, dim=1)
                 logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                #z_horizontal.append(h_split)
+                z_horizontal.append(h_split)
                 for j in range(i+1, self.scales):
                     if j==self.scales-1:
                         h_split, logdet = self.scale_flows[i][j-i](h_pass, L[j], D[j], logdet, reverse=False)
                         logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                        #z_horizontal.append(h_split)
+                        z_horizontal.append(h_split)
                     else:
                         h_pass, logdet = self.scale_flows[i][j-i](h_pass, L[j], D[j], logdet, reverse=False)
                         h_split, h_pass = h_pass.chunk(2, dim=1)
                         logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
-                        #z_horizontal.append(h_split)
+                        z_horizontal.append(h_split)
             
-            #z.append(z_horizontal)
+            z.append(z_horizontal)
+            
+        #return False, logprob, logdet
+        return z, logprob, logdet
         
-        #return z, logprob, logdet
-        return False, logprob, logdet
     
     def decode(self, z, D, logdet):
         #D = [D_{n-1}, D_{n-2}, ..., D_2, D_1, D_0]
