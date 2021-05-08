@@ -132,7 +132,7 @@ class CAFlow(pl.LightningModule):
             #print('z_normal[-1], ', z_normal[-1])
             #print('z_cond[-1], ', z_cond[-1])
             #assert len(z_normal[-1])==len(z_cond[-1])==1
-            #z_normal[-1][0] = z_cond[-1][0].clone()
+            z_normal[-1][0] = z_cond[-1][0].clone()
             del z_cond
 
             L_pred, _ = self.model['UnsharedConditionalFlow'](L=[], z=z_normal, D=D, reverse=True)

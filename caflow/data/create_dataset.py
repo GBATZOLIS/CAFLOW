@@ -15,7 +15,7 @@ from caflow.data.image_folder import is_image_file
 import os
 import numpy as np
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='bicycleGAN', mask_to_area=0.1):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='BicycleGAN', mask_to_area=0.1):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -23,7 +23,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
         for phase in phases_to_create:
             print('Create {} dataset'.format(phase))
             data_paths = make_dataset(os.path.join(master_path, phase))
-            if dataset_style == 'bicycleGAN':
+            if dataset_style == 'BicycleGAN':
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
                         print(i+1)
