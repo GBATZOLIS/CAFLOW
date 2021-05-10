@@ -185,7 +185,7 @@ if __name__ == '__main__':
                                     (The bigger the value of lambda-rect the bigger the imposed dependency on the conditioning image??')
     
     #program arguments
-    parser.add_argument('--dataset-style', default='BicycleGAN', help='identifier of the stored structure of the dataset')
+    parser.add_argument('--dataset-style', type=str, default='image2image', help='identifier of the stored structure of the dataset')
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
     parser.add_argument('--train-batch', type=int, default=8, help='train batch size')
     parser.add_argument('--val-batch', type=int, default=8, help='val batch size')

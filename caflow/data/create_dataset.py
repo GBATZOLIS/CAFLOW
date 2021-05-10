@@ -7,7 +7,7 @@ Created on Mon Feb  8 18:12:48 2021
 """
 
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from caflow.data.aligned_dataset import AlignedDataset
 from caflow.data.image_folder import make_dataset
@@ -15,7 +15,7 @@ from caflow.data.image_folder import is_image_file
 import os
 import numpy as np
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='BicycleGAN', mask_to_area=0.1):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -23,7 +23,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
         for phase in phases_to_create:
             print('Create {} dataset'.format(phase))
             data_paths = make_dataset(os.path.join(master_path, phase))
-            if dataset_style == 'BicycleGAN':
+            if dataset_style == 'image2image':
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
                         print(i+1)
@@ -47,7 +47,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # save
                     A_resize.save(os.path.join(master_path, phase, 'A', basename))
                     B_resize.save(os.path.join(master_path, phase, 'B', basename))
-            else:
+            elif dataset_style in ['inpainting', 'Inpainting']:
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
                         print(i+1)
@@ -77,7 +77,31 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
+            
+            elif dataset_style in ['colorisation', 'colorization', 'Colorisation', 'Colorization']:
+                print('Creating the colorisation dataset.')
+                for i in range(min(dataset_size, len(data_paths))):
+                    if (i+1) % 1000 == 0:
+                        print(i+1)
                     
+                    #------- read -------
+                    img_path = data_paths[i]
+                    basename = os.path.basename(img_path)
+                    img = Image.open(img_path).convert('RGB')
+                    # ----- resize -----
+                    if isinstance(resize_size, int):
+                        resize_size = (resize_size, resize_size)
+                    img_resized = img.resize(resize_size, Image.BICUBIC)
+                    # ---- convert to grayscale ----
+                    A = ImageOps.grayscale(img_resized.copy())
+                    B = img_resized
+                    # ------ save ------
+                    A.save(os.path.join(master_path, phase, 'A', basename))
+                    B.save(os.path.join(master_path, phase, 'B', basename))
+
+                    
+
+
 
                     
 
