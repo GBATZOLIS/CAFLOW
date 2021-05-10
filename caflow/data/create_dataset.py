@@ -47,6 +47,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # save
                     A_resize.save(os.path.join(master_path, phase, 'A', basename))
                     B_resize.save(os.path.join(master_path, phase, 'B', basename))
+                    
             elif dataset_style in ['inpainting', 'Inpainting']:
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
@@ -56,6 +57,32 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     img_path = data_paths[i]
                     basename = os.path.basename(img_path)
                     img = Image.open(img_path).convert('RGB')
+
+                    #----new experiment----
+                    #centrally crop
+                    w, h = img.size
+                    img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h)))
+                    
+                    #resize
+                    if isinstance(resize_size, int):
+                        resize_size = (resize_size, resize_size)
+                    img_resized = img.resize(resize_size, Image.BICUBIC)
+                    A = img_resized.copy()
+                    B = img_resized
+
+                    #apply the central mask
+                    new_w, new_h = img_resized.size
+                    mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
+                    
+                    x1 = new_w//2-mask_len//2
+                    x2 = new_h//2-mask_len//2
+                    for i in range(mask_len):
+                        for j in range(mask_len):
+                            A.putpixel((x1+i, x2+j), (0,0,0))
+
+
+                    """ 
+                    #old experiment -> randomised central masks
                     # ----- resize -----
                     if isinstance(resize_size, int):
                         resize_size = (resize_size, resize_size)
@@ -63,6 +90,8 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = img_resized.copy()
                     B = img_resized
                     #---- apply the mask ---
+
+                    #create a random centralised mask.
                     mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*mask_to_area))
                     window1 = int(0.1*resize_size[0])
                     window2 = int(0.1*resize_size[1])
@@ -72,7 +101,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     for i in range(mask_len):
                         for j in range(mask_len):
                             A.putpixel((x1+i, x2+j), (0,0,0))
-
+                    """
 
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
