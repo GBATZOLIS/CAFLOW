@@ -95,7 +95,7 @@ def main(hparams):
     model.eval()
 
     writer_dir = os.path.join(base_dir, 'testing')
-    writer_dir.mkdir(parents=True, exist_ok=True)
+    Path(writer_dir).mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(log_dir=writer_dir, comment='testing')
 
     temperature_lists = [[T for _ in model.scales] for T in hparams.temperatures]
