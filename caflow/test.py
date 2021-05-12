@@ -14,7 +14,7 @@ import numpy as np
 from pathlib import Path
 
 def annealed_distribution_uflow(hparams):
-    device = torch.device('cuda:%s' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
+    device = torch.device('cuda:%s' % hparams.gpu) if hparams.gpu is not None else torch.device('cpu')
     log_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
     model = UFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(log_dir, 'checkpoints', '*.ckpt'))[0]).to(device)
     model.eval()
@@ -87,7 +87,7 @@ def main(hparams):
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
 
-    device = torch.device('cuda:%s' % hparams.gpus) if hparams.gpus is not None else torch.device('cpu')
+    device = torch.device('cuda:%s' % hparams.gpu) if hparams.gpu is not None else torch.device('cpu')
 
     base_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
 
