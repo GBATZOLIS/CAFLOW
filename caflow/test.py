@@ -102,8 +102,8 @@ def main(hparams):
     for temperature_list in tqdm(temperature_lists):
         for step, (x,y) in tqdm(enumerate(val_dataloader)):
             x, y = x.to(device), y.to(device)
-            #if step > 0:
-            #    continue
+            if step > 0:
+                continue
             draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.running_average)
     
     writer.close()
