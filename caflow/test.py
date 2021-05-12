@@ -98,7 +98,7 @@ def main(hparams):
     Path(writer_dir).mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(log_dir=writer_dir, comment='testing')
 
-    temperature_lists = [[T for _ in model.scales] for T in hparams.temperatures]
+    temperature_lists = [[T for _ in range(model.scales)] for T in hparams.temperatures]
     for temperature_list in tqdm(temperature_lists):
         for step, (x,y) in tqdm(enumerate(val_dataloader)):
             x, y = x.to(device), y.to(device)
