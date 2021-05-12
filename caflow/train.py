@@ -185,7 +185,6 @@ if __name__ == '__main__':
                                     (The bigger the value of lambda-rect the bigger the imposed dependency on the conditioning image??')
     
     #program arguments
-    parser.add_argument('--dataset-style', type=str, default='image2image', help='identifier of the stored structure of the dataset')
     parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
     parser.add_argument('--train-batch', type=int, default=8, help='train batch size')
     parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
@@ -193,12 +192,13 @@ if __name__ == '__main__':
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     
     #the rest are related to the specific dataset and the required transformations
+    parser.add_argument('--dataset-style', type=str, default='image2image', help='identifier of the stored structure of the dataset')
     parser.add_argument('--max-dataset-size', type=int, default=40000, help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--preprocess', default=['resize'])
     parser.add_argument('--no-flip', default=True, action='store_false', help='if specified, do not flip the images for data argumentation')
-    parser.add_argument('--mask-to-area', type=float, default=0.1, help='mask to total area ratio in impainting tasks.')
+    parser.add_argument('--mask-to-area', type=float, default=0.15, help='mask to total area ratio in impainting tasks.')
     
     args = parser.parse_args()
 
