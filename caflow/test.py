@@ -49,6 +49,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, r
             
     # generate images
     for j in range(1, num_samples+1):
+        '''
         average_sampled_image = None
         for j in range(running_average):
             sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
@@ -61,6 +62,11 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, r
         
         for i in range(B):
             all_images[i*raw_length+j]=average_sampled_image[i]
+        '''
+        
+        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
+        for i in range(B):
+            all_images[i*raw_length+j]=sampled_image[i]
                 
     grid = torchvision.utils.make_grid(
                 tensor=all_images,
@@ -103,7 +109,7 @@ def main(hparams):
         for step, (x,y) in tqdm(enumerate(val_dataloader)):
             if step > 0:
                 break
-            
+
             x, y = x.to(device), y.to(device)
             draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.running_average)
     
