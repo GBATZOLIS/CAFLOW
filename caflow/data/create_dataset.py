@@ -58,7 +58,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     basename = os.path.basename(img_path)
                     img = Image.open(img_path).convert('RGB')
 
-                    #----new experiment----
+                    ###----new experiment----
                     #centrally crop
                     w, h = img.size
                     img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h)))
@@ -71,18 +71,24 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     B = img_resized
 
                     #apply the central mask
-                    new_w, new_h = img_resized.size
-                    mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
+                    #new_w, new_h = img_resized.size
+                    #mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
                     
-                    x1 = new_w//2-mask_len//2
-                    x2 = new_h//2-mask_len//2
-                    for i in range(mask_len):
-                        for j in range(mask_len):
-                            A.putpixel((x1+i, x2+j), (0,0,0))
+                    #x1 = new_w//2-mask_len//2
+                    #x2 = new_h//2-mask_len//2
+                    #for i in range(mask_len):
+                    #    for j in range(mask_len):
+                    #        A.putpixel((x1+i, x2+j), (0,0,0))
+
+                    #apply a vertical mask
+                    new_w, new_h = img_resized.size
+                    for i in range(new_w//2, new_w):
+                        for j in range(new_h):
+                            A.putpixel((i, j), (0,0,0))
 
 
                     """ 
-                    #old experiment -> randomised central masks
+                    ###old experiment -> randomised central masks
                     # ----- resize -----
                     if isinstance(resize_size, int):
                         resize_size = (resize_size, resize_size)
@@ -149,7 +155,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = A.resize((resize_size//4, resize_size//4), Image.BICUBIC)
                     A = A.resize(size2resize, Image.BICUBIC)
                     B = img_resized
-                    
+
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
