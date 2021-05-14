@@ -48,25 +48,21 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, r
         all_images[(i+1)*raw_length-1] = I[i]
             
     # generate images
-    for j in range(1, num_samples+1):
-        '''
-        average_sampled_image = None
-        for j in range(running_average):
+    for j in tqdm(range(1, num_samples+1)):
+        average_sampled_image = []
+        for _ in range(running_average):
             sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
-            if average_sampled_image is None:
-                average_sampled_image = sampled_image
-            else:
-                average_sampled_image += sampled_image
+            average_sampled_image.append(sampled_image)
         
-        average_sampled_image = average_sampled_image/running_average
-        
+        average_sampled_image = torch.mean(torch.stack(average_sampled_image), dim=0)
+
         for i in range(B):
             all_images[i*raw_length+j]=average_sampled_image[i]
-        '''
         
-        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
-        for i in range(B):
-            all_images[i*raw_length+j]=sampled_image[i]
+        
+        #sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
+        #for i in range(B):
+        #    all_images[i*raw_length+j]=sampled_image[i]
                 
     grid = torchvision.utils.make_grid(
                 tensor=all_images,
@@ -121,14 +117,14 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, default=None)
 
     #program arguments
-    parser.add_argument('--dataroot', default='caflow/datasets/edges2shoes', help='path to images')
-    parser.add_argument('--val-batch', type=int, default=8, help='val batch size')
+    parser.add_argument('--dataroot', default='caflow/datasets/ffhq', help='path to images')
+    parser.add_argument('--val-batch', type=int, default=20, help='val batch size')
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
 
     #the rest are related to the specific dataset and the required transformations
     parser.add_argument('--create-dataset', default=False, action='store_true')
-    parser.add_argument('--dataset-style', type=str, default='image2image', help='identifier of the stored structure of the dataset')
-    parser.add_argument('--max-dataset-size', type=int, default=40000, help='Maximum number of samples allowed per dataset. \
+    parser.add_argument('--dataset-style', type=str, default='inpainting', help='identifier of the stored structure of the dataset')
+    parser.add_argument('--max-dataset-size', type=int, default=500, help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--mask-to-area', type=float, default=0.15, help='mask to total area ratio in impainting tasks.')

@@ -127,6 +127,33 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
+            
+            elif dataset_style in ['super-resolution']:
+                print('Creating the Super-resolution dataset.')
+                for i in range(min(dataset_size, len(data_paths))):
+                    if (i+1) % 1000 == 0:
+                        print(i+1)
+                    
+                    #------- read -------
+                    img_path = data_paths[i]
+                    basename = os.path.basename(img_path)
+                    img = Image.open(img_path).convert('RGB')
+
+                    # ----- resize -----
+                    if isinstance(resize_size, int):
+                        size2resize = (resize_size, resize_size)
+                    img_resized = img.resize(size2resize, Image.BICUBIC)
+
+                    # ---- convert to LR ----
+                    A = img_resized.copy()
+                    A = A.resize((resize_size//4, resize_size//4), Image.BICUBIC)
+                    A = A.resize(size2resize, Image.BICUBIC)
+                    B = img_resized
+                    
+                    # ------ save ------
+                    A.save(os.path.join(master_path, phase, 'A', basename))
+                    B.save(os.path.join(master_path, phase, 'B', basename))
+
 
                     
 
