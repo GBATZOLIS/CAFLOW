@@ -88,6 +88,8 @@ class CAFlow(pl.LightningModule):
 
         #optimiser settings
         self.learning_rate = opts.learning_rate
+        self.level_off_factor = opts.level_off_factor
+        self.level_off_step = opts.level_off_step
         self.use_warm_up = opts.use_warm_up
         self.warm_up = opts.warm_up
         self.gamma = opts.gamma
@@ -195,10 +197,16 @@ class CAFlow(pl.LightningModule):
             if self.use_warm_up:
                 if s < self.warm_up:
                     return s / self.warm_up
-                else:
+                elif s < self.level_off_step:
                     return self.gamma**(self.current_epoch)
+                else:
+                    return self.level_off_factor*self.gamma**(self.current_epoch)
+
             else:
-                return self.gamma**(self.current_epoch)
+                if s < self.level_off_step:
+                    return self.gamma**(self.current_epoch)
+                else:
+                    return self.level_off_factor*self.gamma**(self.current_epoch)
         
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),

@@ -131,6 +131,8 @@ if __name__ == '__main__':
 
     #optimiser-scheduler settings
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
+    parser.add_argument('--level_off_factor', type=float, default=0.1, help='level-off reducing factor')
+    parser.add_argument('--level_off_step', type=int, default=70000)
     parser.add_argument('--use-warm-up', type=bool, default=True)
     parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
