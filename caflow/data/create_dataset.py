@@ -15,6 +15,14 @@ from caflow.data.image_folder import is_image_file
 import os
 import numpy as np
 
+def center_crop(img, crop_left, crop_right, crop_top, crop_bottom):
+    width, height = img.size
+    left = crop_left
+    right = width - crop_right
+    top = crop_top
+    bottom = height - crop_bottom
+    return img.crop((left, top, right, bottom))
+
 def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
@@ -60,8 +68,9 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
 
                     ###----new experiment----
                     #centrally crop
-                    w, h = img.size
-                    img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h)))
+                    #w, h = img.size
+                    #img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h))) -> used for FFHQ
+                    img = center_crop(img, 40, 40, 60, 30)
                     
                     #resize
                     if isinstance(resize_size, int):
@@ -71,43 +80,22 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     B = img_resized
 
                     #apply the central mask
-                    #new_w, new_h = img_resized.size
-                    #mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
+                    new_w, new_h = img_resized.size
+                    mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
                     
-                    #x1 = new_w//2-mask_len//2
-                    #x2 = new_h//2-mask_len//2
-                    #for i in range(mask_len):
-                    #    for j in range(mask_len):
-                    #        A.putpixel((x1+i, x2+j), (0,0,0))
+                    x1 = new_w//2-mask_len//2
+                    x2 = new_h//2-mask_len//2
+                    for i in range(mask_len):
+                        for j in range(mask_len):
+                            A.putpixel((x1+i, x2+j), (0,0,0))
 
                     #apply a vertical mask
+                    '''
                     new_w, new_h = img_resized.size
                     for i in range(new_w//2, new_w):
                         for j in range(new_h):
                             A.putpixel((i, j), (0,0,0))
-
-
-                    """ 
-                    ###old experiment -> randomised central masks
-                    # ----- resize -----
-                    if isinstance(resize_size, int):
-                        resize_size = (resize_size, resize_size)
-                    img_resized = img.resize(resize_size, Image.BICUBIC)
-                    A = img_resized.copy()
-                    B = img_resized
-                    #---- apply the mask ---
-
-                    #create a random centralised mask.
-                    mask_len = int(np.sqrt(resize_size[0]*resize_size[1]*mask_to_area))
-                    window1 = int(0.1*resize_size[0])
-                    window2 = int(0.1*resize_size[1])
-                    x1 = np.random.randint(window1, resize_size[0]-mask_len-window1)
-                    x2 = np.random.randint(window2, resize_size[1]-mask_len-window2)
-
-                    for i in range(mask_len):
-                        for j in range(mask_len):
-                            A.putpixel((x1+i, x2+j), (0,0,0))
-                    """
+                    '''
 
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
