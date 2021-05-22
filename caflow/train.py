@@ -133,7 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--level_off_factor', type=float, default=0.1, help='level-off reducing factor')
     parser.add_argument('--level_off_step', type=int, default=70000)
-    parser.add_argument('--level_off_step2', type=int, default=90000)
+    parser.add_argument('--level_off_step2', type=int, default=140000)
     parser.add_argument('--use-warm-up', type=bool, default=True)
     parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')
@@ -201,8 +201,9 @@ if __name__ == '__main__':
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--preprocess', default=['resize'])
     parser.add_argument('--no-flip', default=True, action='store_false', help='if specified, do not flip the images for data argumentation')
-    parser.add_argument('--mask-to-area', type=float, default=0.15, help='mask to total area ratio in impainting tasks.')
-    
+    parser.add_argument('--mask-to-area', type=float, default=0.15, help='Mask to total area ratio in impainting tasks.')
+    parser.add_argument('--mask-type', type=str, default='central', help='Mask type for inpainting. Supported types: [central, half].')
+
     args = parser.parse_args()
 
     main(args)

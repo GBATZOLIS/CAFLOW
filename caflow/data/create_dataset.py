@@ -23,7 +23,7 @@ def center_crop(img, crop_left, crop_right, crop_top, crop_bottom):
     bottom = height - crop_bottom
     return img.crop((left, top, right, bottom))
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1, mask_type='central'):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -57,6 +57,8 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     B_resize.save(os.path.join(master_path, phase, 'B', basename))
                     
             elif dataset_style in ['inpainting', 'Inpainting']:
+                dataset = master_path.split('/')[-1]
+                print(dataset)
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
                         print(i+1)
@@ -68,9 +70,11 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
 
                     ###----new experiment----
                     #centrally crop
-                    #w, h = img.size
-                    #img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h))) -> used for FFHQ
-                    img = center_crop(img, 40, 40, 60, 30)
+                    if dataset == 'ffhq':
+                        w, h = img.size
+                        img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h))) #-> used for FFHQ
+                    elif dataset == 'CelebA':
+                        img = center_crop(img, 40, 40, 60, 30)
                     
                     #resize
                     if isinstance(resize_size, int):
@@ -79,23 +83,24 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = img_resized.copy()
                     B = img_resized
 
-                    #apply the central mask
-                    new_w, new_h = img_resized.size
-                    mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
+                    if mask_type == 'central':
+                        #apply the central mask
+                        new_w, new_h = img_resized.size
+                        mask_len = int(np.sqrt(new_w*new_h*mask_to_area))
+                        
+                        x1 = new_w//2-mask_len//2
+                        x2 = new_h//2-mask_len//2
+                        for i in range(mask_len):
+                            for j in range(mask_len):
+                                A.putpixel((x1+i, x2+j), (0,0,0))
                     
-                    x1 = new_w//2-mask_len//2
-                    x2 = new_h//2-mask_len//2
-                    for i in range(mask_len):
-                        for j in range(mask_len):
-                            A.putpixel((x1+i, x2+j), (0,0,0))
-
-                    #apply a vertical mask
-                    '''
-                    new_w, new_h = img_resized.size
-                    for i in range(new_w//2, new_w):
-                        for j in range(new_h):
-                            A.putpixel((i, j), (0,0,0))
-                    '''
+                    elif mask_type == 'half':
+                        #apply a vertical mask
+                        new_w, new_h = img_resized.size
+                        for i in range(new_w//2, new_w):
+                            for j in range(new_h):
+                                A.putpixel((i, j), (0,0,0))
+                        
 
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
