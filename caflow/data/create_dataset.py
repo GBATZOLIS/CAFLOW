@@ -141,8 +141,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
 
                     if dataset == 'celebA':
                         #img = center_crop(img, 40, 40, 60, 30)
-                        img = center_crop(img, 25, 25, 60, 30) #HR -> (160,160)
-                        print(img.size)
+                        img = center_crop(img, 9, 9, 39, 19) #HR -> (160,160)
                         size2resize = img.size
                         img_resized = img.resize(size2resize, Image.BICUBIC)
                     else:
