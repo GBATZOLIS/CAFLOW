@@ -23,7 +23,7 @@ import torch.optim as optim
 
 def main(hparams):
     create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
-                   dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, mask_to_area=hparams.mask_to_area)
+                   dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, mask_to_area=hparams.mask_to_area, sr_factor=hparams.sr_factor)
 
     if hparams.pretrain in ['A', 'B']:
         train_dataset = TemplateDataset(hparams, phase='train', domain=hparams.pretrain)
@@ -203,6 +203,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-flip', default=True, action='store_false', help='if specified, do not flip the images for data argumentation')
     parser.add_argument('--mask-to-area', type=float, default=0.15, help='Mask to total area ratio in impainting tasks.')
     parser.add_argument('--mask-type', type=str, default='central', help='Mask type for inpainting. Supported types: [central, half].')
+    parser.add_argument('--sr-factor', type=int, default=4, help='sr_factor x super-resolution. Default: 4x.')
 
     args = parser.parse_args()
 

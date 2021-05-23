@@ -23,7 +23,7 @@ def center_crop(img, crop_left, crop_right, crop_top, crop_bottom):
     bottom = height - crop_bottom
     return img.crop((left, top, right, bottom))
 
-def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1, mask_type='central'):
+def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, dataset_size=2000, dataset_style='image2image', mask_to_area=0.1, mask_type='central', sr_factor=4):
     phases_to_create = inspect_dataset(master_path, resize_size, dataset_size) 
     if not phases_to_create:
         print('Datasets already in place.')
@@ -127,7 +127,8 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
             
-            elif dataset_style in ['super-resolution']:
+            elif dataset_style in ['super-resolution', 'Super-resolution']:
+                dataset = master_path.split('/')[-1]
                 print('Creating the Super-resolution dataset.')
                 for i in range(min(dataset_size, len(data_paths))):
                     if (i+1) % 1000 == 0:
@@ -138,14 +139,20 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     basename = os.path.basename(img_path)
                     img = Image.open(img_path).convert('RGB')
 
-                    # ----- resize -----
-                    if isinstance(resize_size, int):
-                        size2resize = (resize_size, resize_size)
-                    img_resized = img.resize(size2resize, Image.BICUBIC)
+                    if dataset == 'celebA':
+                        #img = center_crop(img, 40, 40, 60, 30)
+                        img = center_crop(img, 9, 9, 39, 19) #HR -> (160,160)
+                        size2resize = img.size
+                        img_resized = img.resize(size2resize, Image.BICUBIC)
+                    else:
+                        # ----- resize -----
+                        if isinstance(resize_size, int):
+                            size2resize = (resize_size, resize_size)
+                        img_resized = img.resize(size2resize, Image.BICUBIC)
 
                     # ---- convert to LR ----
                     A = img_resized.copy()
-                    A = A.resize((resize_size//4, resize_size//4), Image.BICUBIC)
+                    A = A.resize((size2resize[0]//sr_factor, size2resize[1]//sr_factor), Image.BICUBIC)
                     A = A.resize(size2resize, Image.BICUBIC)
                     B = img_resized
 

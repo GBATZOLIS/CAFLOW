@@ -12,6 +12,8 @@ from tqdm import tqdm
 from caflow.models.UFlow import UFlow
 import numpy as np
 from pathlib import Path
+from piqa.psnr import psnr, mse
+from piqa.lpips import LPIPS
 
 def annealed_distribution_uflow(hparams):
     device = torch.device('cuda:%s' % hparams.gpu) if hparams.gpu is not None else torch.device('cpu')
@@ -70,27 +72,11 @@ def conditional_log_prob(Y, I, model):
     D, _, _ = model.model['rflow'](y=Y)
     L, _, tlogdet = model.model['tflow'](y=I)
     Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
-    conditional_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
+    cond_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
     return cond_log_prob
 
-def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, running_average=1):
-    B = Y.shape[0]
-    raw_length = 1+num_samples+1
-    all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
-    cond_log_probs = torch.zeros(B*raw_length, device=torch.device('cpu'), requires_grad=False)
 
-    for i in range(B):
-        all_images[i*raw_length] = Y[i]
-        all_images[(i+1)*raw_length-1] = I[i]
-
-    #Calculate the conditional log probabilities of the ground truth images
-    D, _, _ = model.model['rflow'](y=Y)
-    L, _, tlogdet = model.model['tflow'](y=I)
-    Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
-    conditional_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
-    for i in range(B):
-        cond_log_probs[(i+1)*raw_length-1] = conditional_log_prob[i]
-    
+'''
     #generated jittered images
     jitter=75e-2
     jittered_images = all_images.clone()
@@ -118,31 +104,10 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, r
     str_title = 'valbatch_%d_epoch_%d_jitter_%.8f' % (batch_ID, model.current_epoch, jitter)
     writer.add_image(str_title, grid)
     writer.flush()
-    
-    """    
-    # generate images
-    for j in tqdm(range(1, num_samples+1)):
-        '''
-        average_sampled_image = []
-        for _ in range(running_average):
-            sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
-            average_sampled_image.append(sampled_image)
-        
-        average_sampled_image = torch.mean(torch.stack(average_sampled_image), dim=0)
+'''
 
-        for i in range(B):
-            all_images[i*raw_length+j]=average_sampled_image[i]
-        '''
-        
-        #decoding
-        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
-        
-        #encoding
-        cond_log_prob = conditional_log_prob(Y, sampled_image, model)
-        for i in range(B):
-            all_images[i*raw_length+j] = sampled_image[i]
-            cond_log_probs[i*raw_length+j] = cond_log_prob[i]
 
+def plot_samples(writer, model, all_images, title, raw_length):
     #Standard plotting procedure
     grid = torchvision.utils.make_grid(
                 tensor=all_images,
@@ -152,38 +117,70 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, r
                 range=model.sample_norm_range,
                 scale_each=model.sample_scale_each,
                 pad_value=model.sample_pad_value,
-        )
-    temp_string = ['%.2f' % x for x in temperature_list]
-    temp_string='_'.join(temp_string)
-    str_title = 'valbatch_%d_epoch_%d_' % (batch_ID, model.current_epoch)+temp_string
-    writer.add_image(str_title, grid)
+            )
+
+    writer.add_image(title, grid)
     writer.flush()
+
+
+def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, plot, num_selected_samples):
+    B = Y.shape[0]
+    raw_length = 1+num_samples+1
+    all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
+    cond_log_probs = torch.zeros(B*raw_length, device=torch.device('cpu'), requires_grad=False)
+
+    for i in range(B):
+        all_images[i*raw_length] = Y[i]
+        all_images[(i+1)*raw_length-1] = I[i]
+
+    #Calculate the conditional log probabilities of the ground truth images
+    D, _, _ = model.model['rflow'](y=Y)
+    L, _, tlogdet = model.model['tflow'](y=I)
+    Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    cond_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
+    for i in range(B):
+        cond_log_probs[(i+1)*raw_length-1] = cond_log_prob[i]
+
+    # generate images
+    for j in tqdm(range(1, num_samples+1)):
+        #decoding
+        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
+        
+        #encoding
+        cond_log_prob = conditional_log_prob(Y, sampled_image, model)
+        for i in range(B):
+            all_images[i*raw_length+j] = sampled_image[i]
+            cond_log_probs[i*raw_length+j] = cond_log_prob[i]
+
+    if plot:
+        temp_string = ['%.2f' % x for x in temperature_list]
+        temp_string='_'.join(temp_string)
+        title = 'valbatch_%d_epoch_%d_' % (batch_ID, model.current_epoch)+temp_string
+        plot_samples(writer, model, all_images, title, raw_length)
 
     #Plot the images in descending conditional log probability. j: 1, num_samples+1
     reordered_all_images = all_images.clone()
-    include_gt = 1
+    include_gt = 0
     for i in range(B):
         cond_samples = all_images[i*raw_length+1:i*raw_length+num_samples+1+include_gt].clone()
         cond_log_probabilities = cond_log_probs[i*raw_length+1:i*raw_length+num_samples+1+include_gt]
 
         sorted_indices = torch.argsort(cond_log_probabilities, dim=-1, descending=True)
         reordered_all_images[i*raw_length+1:i*raw_length+num_samples+1+include_gt] = cond_samples[sorted_indices, ::]
+    
+    if plot:
+        temp_string = ['%.2f' % x for x in temperature_list]
+        temp_string='_'.join(temp_string)
+        title = 'valbatch_%d_epoch_%d_descending_cond_log_prob' % (batch_ID, model.current_epoch)+temp_string
+        plot_samples(writer, model, reordered_all_images, title, raw_length)
 
-    grid = torchvision.utils.make_grid(
-                tensor=reordered_all_images,
-                nrow = raw_length, #Number of images displayed in each row of the grid
-                padding=model.sample_padding,
-                normalize=model.sample_normalize,
-                range=model.sample_norm_range,
-                scale_each=model.sample_scale_each,
-                pad_value=model.sample_pad_value,
-        )
-    temp_string = ['%.2f' % x for x in temperature_list]
-    temp_string='_'.join(temp_string)
-    str_title = 'valbatch_%d_epoch_%d_descending_cond_log_prob' % (batch_ID, model.current_epoch)+temp_string
-    writer.add_image(str_title, grid)
-    writer.flush()
-    """
+    selected_images = []
+    for i in range(B):
+        selected = reordered_all_images[i*raw_length+1:i*raw_length+num_selected_samples+1]
+        selected_images.append(selected)
+    selected_images = torch.stack(selected_images)
+
+    return selected_images
 
 
 def main(hparams):
@@ -207,17 +204,27 @@ def main(hparams):
     Path(writer_dir).mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(log_dir=writer_dir, comment='testing')
 
-    temperature_lists = [[T for _ in range(model.scales)] for T in hparams.temperatures]
-    for temperature_list in tqdm(temperature_lists):
-        for step, (x,y) in tqdm(enumerate(val_dataloader)):
-            if step>=1:
-                continue
-            #if step < 14 or step > 14:
-            #    continue
+    average_rmse = []
+    lpips = LPIPS(scaling=False, reduction='none')
+    average_lpips = []
+    with torch.no_grad():
+        temperature_lists = [[T for _ in range(model.scales)] for T in hparams.temperatures]
+        for temperature_list in tqdm(temperature_lists):
+            for step, (x,y) in tqdm(enumerate(val_dataloader)):
+                #if step>=1:
+                #    continue
+                #if step < 14 or step > 14:
+                #    continue
 
-            x, y = x.to(device), y.to(device)
-            draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.running_average)
-    
+                x, y = x.to(device), y.to(device)
+                selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                selected_samples = torch.squeeze(selected_samples, dim=1)
+                average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples, y))).item())
+                average_lpips.append(torch.mean(lpips(selected_samples/255, y/255)).item())
+
+    print('Average RMSE: %.2f' % np.mean(average_rmse))
+    print('Average LPIPS: %.2f' % np.mean(average_lpips))
+
     writer.close()
 
 if __name__ == '__main__':
@@ -242,8 +249,10 @@ if __name__ == '__main__':
     # Testing
     parser.add_argument('--experiment', type=int, default=0, help='which experiment to test.')
     parser.add_argument('--num-samples', type=int, default=8, help='num of samples to generate in testing.')
+    parser.add_argument('--num-selected-samples', type=int, default=4, help='num of selected samples based on conditional log-likelihood.')
     parser.add_argument('--running-average', type=int, default=10, help='Average the output image over running_average sampled latents.')
-
+    parser.add_argument('--plot', default=False, action='store_true', help='whether to plot the generated samples.')
+    
     # parameteres related to sampling from the annealed latent distribution
     parser.add_argument('--temperatures', type=float, nargs="+", help='List of temperature ranges to anneal the latent distribution.')
 
