@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 from piqa.psnr import psnr, mse
 from piqa.lpips import LPIPS
+from torchvision.utils import save_image
 
 def annealed_distribution_uflow(hparams):
     device = torch.device('cuda:%s' % hparams.gpu) if hparams.gpu is not None else torch.device('cpu')
@@ -142,14 +143,14 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
         cond_log_probs[(i+1)*raw_length-1] = cond_log_prob[i]
 
     # generate images
-    for j in tqdm(range(1, num_samples+1)):
+    for j in range(1, num_samples+1):
         #decoding
-        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list).detach().cpu()
+        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
         
         #encoding
         cond_log_prob = conditional_log_prob(Y, sampled_image, model)
         for i in range(B):
-            all_images[i*raw_length+j] = sampled_image[i]
+            all_images[i*raw_length+j] = sampled_image[i].detach().cpu()
             cond_log_probs[i*raw_length+j] = cond_log_prob[i]
 
     if plot:
@@ -182,12 +183,16 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
 
     return selected_images
 
+def calculate_pixel_std(samples):
+    #samples.size = (batch, samples, channels, height, width)
+    return torch.mean(torch.std(samples, dim=1, unbiased=True, keepdim=False))
 
 def main(hparams):
     if hparams.create_dataset:
         create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
                        dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, \
-                       mask_to_area=hparams.mask_to_area, mask_type=hparams.mask_type)
+                       mask_to_area=hparams.mask_to_area, mask_type=hparams.mask_type,
+                       sr_factor=hparams.sr_factor)
 
     val_dataset = TemplateDataset(hparams, phase='val')
     val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
@@ -204,26 +209,45 @@ def main(hparams):
     Path(writer_dir).mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(log_dir=writer_dir, comment='testing')
 
+    images_dir = os.path.join(base_dir, 'images')
+    Path(images_dir).mkdir(parents=True, exist_ok=True)
+
     average_rmse = []
-    lpips = LPIPS(scaling=False, reduction='none')
+    lpips = LPIPS(scaling=False, reduction='none').to(device)
     average_lpips = []
+    average_pixel_stds = []
     with torch.no_grad():
         temperature_lists = [[T for _ in range(model.scales)] for T in hparams.temperatures]
-        for temperature_list in tqdm(temperature_lists):
+        for temperature_list in temperature_lists:
             for step, (x,y) in tqdm(enumerate(val_dataloader)):
-                #if step>=1:
-                #    continue
-                #if step < 14 or step > 14:
-                #    continue
+                #if step > 0:
+                #    break
 
                 x, y = x.to(device), y.to(device)
                 selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
-                selected_samples = torch.squeeze(selected_samples, dim=1)
-                average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples, y))).item())
-                average_lpips.append(torch.mean(lpips(selected_samples/255, y/255)).item())
+
+                if hparams.num_selected_samples == 1:
+                    selected_samples = torch.squeeze(selected_samples, dim=1)
+                    for j in range(selected_samples.size(0)):
+                        save_image(selected_samples[j], os.path.join(images_dir, 'img_%d_%d.png'%(step, j)))
+                    average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples.to(device), y))).item())
+                    average_lpips.append(torch.mean(lpips(selected_samples.to(device)/255, y/255)).item())
+                else:
+                    #1.) calculate the standard deviation of the pixels
+                    avg_pixel_std = calculate_pixel_std(selected_samples)
+                    average_pixel_stds.append(avg_pixel_std)
+
+                    #2.) save images
+                    for j in range(selected_samples.size(0)):
+                        for i in range(selected_samples.size(1)):
+                            save_image(selected_samples[j][i], os.path.join(images_dir, 'img_%d_%d_%d.png'%(step, j, i)), normalize = True)
+
+
+                
 
     print('Average RMSE: %.2f' % np.mean(average_rmse))
     print('Average LPIPS: %.2f' % np.mean(average_lpips))
+    print('Average pixel std: %.3f' % np.mean(average_pixel_stds))
 
     writer.close()
 
@@ -245,7 +269,8 @@ if __name__ == '__main__':
     parser.add_argument('--load-size', type=int, default=64)
     parser.add_argument('--mask-to-area', type=float, default=0.15, help='mask to total area ratio in impainting tasks.')
     parser.add_argument('--mask-type', type=str, default='central', help='mask type for inpainting. Supported types: central, half.')
-    
+    parser.add_argument('--sr-factor', type=int, default=4, help='sr_factor x super-resolution. Default: 4x.')
+
     # Testing
     parser.add_argument('--experiment', type=int, default=0, help='which experiment to test.')
     parser.add_argument('--num-samples', type=int, default=8, help='num of samples to generate in testing.')

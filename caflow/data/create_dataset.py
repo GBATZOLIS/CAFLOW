@@ -37,7 +37,6 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                         print(i+1)
                     AB_path = data_paths[i]
                     basename = os.path.basename(AB_path)
-                    
                     # read, crop, resize, save
                     
                     # read
@@ -115,6 +114,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     #------- read -------
                     img_path = data_paths[i]
                     basename = os.path.basename(img_path)
+                    print(basename)
                     img = Image.open(img_path).convert('RGB')
                     # ----- resize -----
                     if isinstance(resize_size, int):
@@ -124,6 +124,9 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = ImageOps.grayscale(img_resized.copy())
                     B = img_resized
                     # ------ save ------
+                    if basename.split('.')[-1] is not 'png':
+                        basename = basename.split('.')[0]+'.png'
+
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
             
