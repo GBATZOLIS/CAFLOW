@@ -237,6 +237,9 @@ def main(hparams):
                     avg_pixel_std = calculate_pixel_std(selected_samples)
                     average_pixel_stds.append(avg_pixel_std)
 
+                    average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples[:,0,::].to(device), y))).item())
+                    average_lpips.append(torch.mean(lpips(selected_samples[:,0,::].to(device)/255, y/255)).item())
+
                     #2.) save images
                     for j in range(selected_samples.size(0)):
                         for i in range(selected_samples.size(1)):
