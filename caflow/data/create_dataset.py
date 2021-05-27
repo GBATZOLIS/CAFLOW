@@ -72,12 +72,14 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     if dataset == 'ffhq':
                         w, h = img.size
                         img = img.crop((int(0.1*w), int(0.1*h), int(w-0.1*w), int(h-0.1*h))) #-> used for FFHQ
-                    elif dataset == 'CelebA':
+                    elif dataset in ['CelebA', 'celebA']:
                         img = center_crop(img, 40, 40, 60, 30)
+                        #print('only for testing paper images')
                     
                     #resize
                     if isinstance(resize_size, int):
                         resize_size = (resize_size, resize_size)
+
                     img_resized = img.resize(resize_size, Image.BICUBIC)
                     A = img_resized.copy()
                     B = img_resized

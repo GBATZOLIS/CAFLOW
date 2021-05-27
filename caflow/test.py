@@ -143,7 +143,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
         cond_log_probs[(i+1)*raw_length-1] = cond_log_prob[i]
 
     # generate images
-    for j in range(1, num_samples+1):
+    for j in tqdm(range(1, num_samples+1)):
         #decoding
         sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
         
@@ -153,7 +153,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
             all_images[i*raw_length+j] = sampled_image[i].detach().cpu()
             cond_log_probs[i*raw_length+j] = cond_log_prob[i]
 
-    if plot:
+    if plot=='everything':
         temp_string = ['%.2f' % x for x in temperature_list]
         temp_string='_'.join(temp_string)
         title = 'valbatch_%d_epoch_%d_' % (batch_ID, model.current_epoch)+temp_string
@@ -169,7 +169,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
         sorted_indices = torch.argsort(cond_log_probabilities, dim=-1, descending=True)
         reordered_all_images[i*raw_length+1:i*raw_length+num_samples+1+include_gt] = cond_samples[sorted_indices, ::]
     
-    if plot:
+    if plot=='everything':
         temp_string = ['%.2f' % x for x in temperature_list]
         temp_string='_'.join(temp_string)
         title = 'valbatch_%d_epoch_%d_descending_cond_log_prob' % (batch_ID, model.current_epoch)+temp_string
@@ -180,6 +180,21 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
         selected = reordered_all_images[i*raw_length+1:i*raw_length+num_selected_samples+1]
         selected_images.append(selected)
     selected_images = torch.stack(selected_images)
+
+    if plot in ['everything', 'selected']:
+        selected_raw_length = 1+num_selected_samples+1
+        selected_images_for_plotting = torch.zeros(tuple([B*selected_raw_length,]) + I.shape[1:], device=torch.device('cpu'), requires_grad=False)
+        for i in range(B):
+            selected_images_for_plotting[i*selected_raw_length] = Y[i]
+            selected_images_for_plotting[(i+1)*selected_raw_length-1] = I[i]
+            selected_images_for_plotting[i*selected_raw_length+1:i*selected_raw_length+num_selected_samples+1] = reordered_all_images[i*raw_length+1:i*raw_length+num_selected_samples+1]
+        
+        temp_string = ['%.2f' % x for x in temperature_list]
+        temp_string='_'.join(temp_string)
+        title = 'valbatch_%d_epoch_%d_descending_cond_log_prob_selected_samples' % (batch_ID, model.current_epoch)+temp_string
+        plot_samples(writer, model, selected_images_for_plotting, title, selected_raw_length)
+
+
 
     return selected_images
 
@@ -213,6 +228,7 @@ def main(hparams):
     Path(images_dir).mkdir(parents=True, exist_ok=True)
 
     average_rmse = []
+    average_psnr = []
     lpips = LPIPS(scaling=False, reduction='none').to(device)
     average_lpips = []
     average_pixel_stds = []
@@ -220,8 +236,6 @@ def main(hparams):
         temperature_lists = [[T for _ in range(model.scales)] for T in hparams.temperatures]
         for temperature_list in temperature_lists:
             for step, (x,y) in tqdm(enumerate(val_dataloader)):
-                #if step > 0:
-                #    break
 
                 x, y = x.to(device), y.to(device)
                 selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
@@ -230,12 +244,16 @@ def main(hparams):
                     selected_samples = torch.squeeze(selected_samples, dim=1)
                     for j in range(selected_samples.size(0)):
                         save_image(selected_samples[j], os.path.join(images_dir, 'img_%d_%d.png'%(step, j)), normalize = True)
+                    
+                    average_psnr.append(torch.mean(psnr(selected_samples.to(device)/255, y/255)).item())
                     average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples.to(device), y))).item())
                     average_lpips.append(torch.mean(lpips(selected_samples.to(device)/255, y/255)).item())
+                    #average_lpips.append(torch.mean(lpips(x/255, y/255)).item()) #-> CALCULATE BASELINE
                 else:
                     #1.) calculate the standard deviation of the pixels
                     avg_pixel_std = calculate_pixel_std(selected_samples)
                     average_pixel_stds.append(avg_pixel_std)
+                    
 
                     average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples[:,0,::].to(device), y))).item())
                     average_lpips.append(torch.mean(lpips(selected_samples[:,0,::].to(device)/255, y/255)).item())
@@ -247,7 +265,7 @@ def main(hparams):
 
 
                 
-
+    print('Average PSNR: %.2f' % np.mean(average_psnr))
     print('Average RMSE: %.2f' % np.mean(average_rmse))
     print('Average LPIPS: %.2f' % np.mean(average_lpips))
     print('Average pixel std: %.3f' % np.mean(average_pixel_stds))
@@ -277,9 +295,9 @@ if __name__ == '__main__':
     # Testing
     parser.add_argument('--experiment', type=int, default=0, help='which experiment to test.')
     parser.add_argument('--num-samples', type=int, default=8, help='num of samples to generate in testing.')
-    parser.add_argument('--num-selected-samples', type=int, default=4, help='num of selected samples based on conditional log-likelihood.')
+    parser.add_argument('--num-selected-samples', type=int, default=1, help='num of selected samples based on conditional log-likelihood.')
     parser.add_argument('--running-average', type=int, default=10, help='Average the output image over running_average sampled latents.')
-    parser.add_argument('--plot', default=False, action='store_true', help='whether to plot the generated samples.')
+    parser.add_argument('--plot', default=None, help='whether to plot the generated samples.')
     
     # parameteres related to sampling from the annealed latent distribution
     parser.add_argument('--temperatures', type=float, nargs="+", help='List of temperature ranges to anneal the latent distribution.')
