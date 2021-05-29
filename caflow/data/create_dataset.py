@@ -158,7 +158,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # ---- convert to LR ----
                     A = img_resized.copy()
                     A = A.resize((size2resize[0]//sr_factor, size2resize[1]//sr_factor), Image.BICUBIC)
-                    A = A.resize(size2resize, Image.BICUBIC)
+                    A = A.resize(size2resize, Image.NEAREST)
                     B = img_resized
 
                     # ------ save ------
