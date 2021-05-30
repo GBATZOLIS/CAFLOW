@@ -144,8 +144,9 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     basename = os.path.basename(img_path)
                     img = Image.open(img_path).convert('RGB')
 
-                    if dataset == 'celebA':
-                        #img = center_crop(img, 40, 40, 60, 30)
+                    if dataset in ['celebA', 'CelebA', 'celebA_superresolution', 'CelebA_superresolution']:
+                        #We are comparing against SRFLOW in this experiment.
+                        #img = center_crop(img, 40, 40, 60, 30)->central cropping used by You Lu et al. for inpainting on CelebA.
                         img = center_crop(img, 9, 9, 39, 19) #HR -> (160,160)
                         size2resize = img.size
                         img_resized = img.resize(size2resize, Image.BICUBIC)
