@@ -126,7 +126,7 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     A = ImageOps.grayscale(img_resized.copy())
                     B = img_resized
                     # ------ save ------
-                    if basename.split('.')[-1] is not 'png':
+                    if basename.split('.')[-1] not in ['png', 'jpg']:
                         basename = basename.split('.')[0]+'.png'
 
                     A.save(os.path.join(master_path, phase, 'A', basename))
