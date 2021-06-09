@@ -134,6 +134,8 @@ if __name__ == '__main__':
     parser.add_argument('--level_off_factor', type=float, default=0.1, help='level-off reducing factor')
     parser.add_argument('--level_off_step', type=int, default=70000)
     parser.add_argument('--level_off_step2', type=int, default=140000)
+    parser.add_argument('--level_off_steps', type=int, nargs="+", help='List of training steps to reduce the learning rate.')
+
     parser.add_argument('--use-warm-up', type=bool, default=True)
     parser.add_argument('--warm_up', type=int, default=500, help='num of warm up steps.')
     parser.add_argument('--gamma', type=float, default=0.999, help='lr decay factor per epoch')

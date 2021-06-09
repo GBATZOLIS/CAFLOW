@@ -91,6 +91,7 @@ class CAFlow(pl.LightningModule):
         self.level_off_factor = opts.level_off_factor
         self.level_off_step = opts.level_off_step
         self.level_off_step2 = opts.level_off_step2
+        self.level_off_steps = opts.level_off_steps
         self.use_warm_up = opts.use_warm_up
         self.warm_up = opts.warm_up
         self.gamma = opts.gamma
@@ -193,31 +194,43 @@ class CAFlow(pl.LightningModule):
                 self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
     def configure_optimizers(self,):
-        def scheduler_lambda_function(s):
-            #warmup until it reaches scale 1 and then STEP LR decrease every other epoch with gamma factor.
-            if self.use_warm_up:
-                if s < self.warm_up:
-                    return s / self.warm_up
-                elif s < self.level_off_step:
-                    return self.gamma**(self.current_epoch)
-                elif s < self.level_off_step2:
-                    return self.level_off_factor*self.gamma**(self.current_epoch)
+        class scheduler_lambda_function:
+            def __init__(self, use_warm_up, warm_up, level_off_steps, level_off_factor, gamma, current_epoch):
+                self.use_warm_up = use_warm_up
+                self.warm_up = warm_up
+                self.level_off_steps = level_off_steps
+                self.level_off_factor = level_off_factor
+                self.gamma = gamma
+                self.current_epoch = current_epoch
+            
+            def calculate_exponent_factor(self, s, level_off_steps):
+                if s < level_off_steps[0]:
+                    return 0
+                elif s >= level_off_steps[-1]:
+                    return len(level_off_steps)
                 else:
-                    return self.level_off_factor**2*self.gamma**(self.current_epoch)
+                    exponent=None
+                    for i in range(len(level_off_steps)-1):
+                        if s >= level_off_steps[i] and s < level_off_steps[i+1]:
+                            exponent = i+1
+                    return exponent
 
-            else:
-                if s < self.level_off_step:
-                    return self.gamma**(self.current_epoch)
-                elif s < self.level_off_step2:
-                    return self.level_off_factor*self.gamma**(self.current_epoch)
+            def __call__(self, s):
+                if self.use_warm_up:
+                    if s < self.warm_up:
+                        return s / self.warm_up
+                    else:
+                        exponent = self.calculate_exponent_factor(s, self.level_off_steps)
+                        return self.level_off_factor**exponent*self.gamma**(self.current_epoch)
                 else:
-                    return self.level_off_factor**2*self.gamma**(self.current_epoch)
-        
+                    exponent = self.calculate_exponent_factor(s, self.level_off_steps)
+                    return self.level_off_factor**exponent*self.gamma**(self.current_epoch)
+
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, scheduler_lambda_function),
+        scheduler = {'scheduler': optim.lr_scheduler.LambdaLR(optimizer, \
+                    scheduler_lambda_function(self.use_warm_up, self.warm_up, self.level_off_steps, self.level_off_factor, self.gamma, self.current_epoch)),
                     'interval': 'step'}  # called after each training step
-
-        #lambda s: min(1., s / self.warm_up) -> warm_up lambda
+                    
         return [optimizer], [scheduler]
     
     #@torch.no_grad()
