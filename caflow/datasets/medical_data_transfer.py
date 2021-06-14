@@ -81,6 +81,7 @@ def pairs_for_time_threshold(T : int, info: dict):
                 for mri_date in mri_dates:
                     delta = pet_date - mri_date
                     if abs(delta.days) <= T:
+                        print('days difference: %d', abs(delta.days))
                         num_pairs+=1
     return num_pairs
 
@@ -89,7 +90,7 @@ def main(args):
 
     plt.figure()
     plt.title('Number of pairs as a function of time between acquistion threshold')
-    time_thresholds = np.arange(1, 31)
+    time_thresholds = np.arange(1, args.max_time_threshold)
     num_pairs = [pairs_for_time_threshold(T, info) for T in time_thresholds]
     plt.plot(time_thresholds, num_pairs)
     plt.savefig('num_pairs_function_of_acquistion_time_threshold.png')
@@ -99,5 +100,9 @@ if __name__ == '__main__':
     parser.add_argument('--input-dir', type=str, default='/mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet')
     parser.add_argument('--output-dir', type=str, default='/home/gb511/MRI2PET/CAFLOW/caflow/datasets')
     parser.add_argument('--dataset-type', type=str, default='linear-MNI-sliced')
+
+    #inspection settings
+    parser.add_argument('--max-time-threshold', type=int, default=40, help='Maximum difference between MRI and PET')
+
     args = parser.parse_args()
     main(args)
