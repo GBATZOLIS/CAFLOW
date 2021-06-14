@@ -34,7 +34,7 @@ def inspect_data(input_dir, output_dir, dataset_type):
         for session in os.listdir(subject_dir):
             #session example: ses-2018-05-14
             year, month, day = int(session.split('-')[1]), int(session.split('-')[2]), int(session.split('-')[3])
-            session_date = datetime.datetime(year, month, day)
+            session_date = datetime.date(year=year, month=month, day=day)
 
             immediate_directories_list = os.listdir(os.path.join(subject_dir, session))
             if 'pet' not in immediate_directories_list \
