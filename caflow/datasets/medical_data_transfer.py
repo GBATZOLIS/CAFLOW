@@ -80,6 +80,8 @@ def pairs_for_time_threshold(T : int, info: dict):
             for pet_date in pet_dates:
                 for mri_date in mri_dates:
                     delta = pet_date - mri_date
+                    print(mri_date)
+                    print(pet_date)
                     print('Subject %d -> days difference: %d' % (subjectID, abs(delta.days)))
                     if abs(delta.days) <= T:
                         num_pairs+=1
