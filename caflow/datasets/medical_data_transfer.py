@@ -36,32 +36,27 @@ def inspect_data(input_dir, output_dir, dataset_type):
             year, month, day = int(session.split('-')[1]), int(session.split('-')[2]), int(session.split('-')[3])
             session_date = datetime.date(year=year, month=month, day=day)
 
-            immediate_directories_list = os.listdir(os.path.join(subject_dir, session))
-            if 'pet' not in immediate_directories_list \
-                or 'anat' not in immediate_directories_list:
-                continue
-            else:
-                if os.path.exists(os.path.join(subject_dir, session, 'pet')):
-                    pet_scan = '%s_%s_acq-FDG_run-1_%s.nii.gz' % (subject, session, pet_dataset_type)
+            if os.path.exists(os.path.join(subject_dir, session, 'pet')):
+                pet_scan = '%s_%s_acq-FDG_run-1_%s.nii.gz' % (subject, session, pet_dataset_type)
 
-                    try:
-                        assert pet_scan in os.listdir(os.path.join(subject_dir, session, 'pet')), '%s not in the preprocessed files.' % pet_dataset_type
-                    except AssertionError:
-                        print('%s does not contain the required preprocessed file: %s in %s/pet' % (subject, pet_dataset_type, session))
+                try:
+                    assert pet_scan in os.listdir(os.path.join(subject_dir, session, 'pet')), '%s not in the preprocessed files.' % pet_dataset_type
+                except AssertionError:
+                    print('%s does not contain the required preprocessed file: %s in %s/pet' % (subject, pet_dataset_type, session))
 
-                    path = os.path.join(subject_dir, session, 'pet', pet_scan)
-                    info[subjectID]['pet'].append([session_date, path])
+                path = os.path.join(subject_dir, session, 'pet', pet_scan)
+                info[subjectID]['pet'].append([session_date, path])
                 
-                if os.path.exists(os.path.join(subject_dir, session, 'anat')):
-                    mri_scan = 'T1_to_%s.nii.gz' % mri_dataset_type
+            if os.path.exists(os.path.join(subject_dir, session, 'anat')):
+                mri_scan = 'T1_to_%s.nii.gz' % mri_dataset_type
 
-                    try:
-                        assert mri_scan in os.listdir(os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session))), '%s not in the preprocessed files.' % mri_dataset_type
-                    except AssertionError:
-                        print('%s does not contain the required preprocessed file: %s in %s/anat/' % (subject, mri_dataset_type, session))
+                try:
+                    assert mri_scan in os.listdir(os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session))), '%s not in the preprocessed files.' % mri_dataset_type
+                except AssertionError:
+                    print('%s does not contain the required preprocessed file: %s in %s/anat/' % (subject, mri_dataset_type, session))
 
-                    path = os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session), mri_scan)
-                    info[subjectID]['mri'].append([session_date, path])
+                path = os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session), mri_scan)
+                info[subjectID]['mri'].append([session_date, path])
 
     return info
 
