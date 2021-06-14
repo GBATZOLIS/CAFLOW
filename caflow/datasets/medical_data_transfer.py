@@ -87,7 +87,8 @@ def pairs_for_time_threshold(T : int, info: dict):
 
 def main(args):
     info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
-    
+    print(len(info.keys())
+
     plt.figure()
     plt.title('Number of pairs as a function of time between acquistion threshold')
     time_thresholds = np.arange(1, args.max_time_threshold)
@@ -95,8 +96,8 @@ def main(args):
     plt.plot(time_thresholds, num_pairs)
     plt.savefig('num_pairs_function_of_acquistion_time_threshold.png')
 
-    print(len(info.keys())
     
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--input-dir', type=str, default='/mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet')
