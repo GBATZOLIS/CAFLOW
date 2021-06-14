@@ -87,7 +87,6 @@ def pairs_for_time_threshold(T : int, info: dict):
 
 def main(args):
     info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
-    print(len(info.keys())
 
     plt.figure()
     plt.title('Number of pairs as a function of time between acquistion threshold')
@@ -95,8 +94,6 @@ def main(args):
     num_pairs = [pairs_for_time_threshold(T, info) for T in time_thresholds]
     plt.plot(time_thresholds, num_pairs)
     plt.savefig('num_pairs_function_of_acquistion_time_threshold.png')
-
-    
 
 if __name__ == '__main__':
     parser = ArgumentParser()
