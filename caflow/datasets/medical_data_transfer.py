@@ -96,7 +96,7 @@ def inspect_scan(scan, name):
     #                            2.) Dimensionality
 
     #x is a numpy array
-    print('Scan shape: ', scan.shape())
+    print('Scan shape: ', scan.shape)
     flattened_scan = scan.flatten()
     for x in flattened_scan:
         if x % int(x) == 0:
