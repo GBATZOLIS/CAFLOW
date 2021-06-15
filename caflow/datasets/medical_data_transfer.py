@@ -126,13 +126,26 @@ def plot_num_pairs_vs_acquisition_threshold(max_time_threshold, info):
     plt.plot(time_thresholds, num_pairs)
     plt.savefig('num_pairs_function_of_acquistion_time_threshold.png')
 
+def save(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
 
 '''2'''
 # Create a function that receives as input the paired paths 
 # and copies them to the correct directory for training, validation and testing
 
 def main(args):
-    info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
+    if args.load_info:
+        info = load('dataset_info')
+    else:
+        info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
+        save(info, 'dataset_info')
+
     #plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
     
     num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(35, info)
@@ -150,6 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset-type', type=str, default='linear-MNI-sliced')
 
     #inspection settings
+    parser.add_argument('--load-info', default=False, action='store_true', help='Load inspection info. If not loaded, it will be generated. Default=False)
     parser.add_argument('--max-time-threshold', type=int, default=40, help='Maximum difference between MRI and PET')
 
     args = parser.parse_args()
