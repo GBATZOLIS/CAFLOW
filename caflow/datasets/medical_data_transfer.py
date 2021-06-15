@@ -6,6 +6,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
+import nibabel as nib
 
 #input_dir = /mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet
 #output_dir = /home/gb511/MRI2PET/CAFLOW/caflow/datasets
@@ -45,6 +46,7 @@ def inspect_data(input_dir, output_dir, dataset_type):
                     print('%s does not contain the required preprocessed file: %s in %s/pet' % (subject, pet_dataset_type, session))
 
                 path = os.path.join(subject_dir, session, 'pet', pet_scan)
+                #name = os.path.basename(path).split('.')[0]
                 info[subjectID]['pet'].append([session_date, path])
                 
             if os.path.exists(os.path.join(subject_dir, session, 'anat')):
@@ -56,6 +58,7 @@ def inspect_data(input_dir, output_dir, dataset_type):
                     print('%s does not contain the required preprocessed file: %s in %s/anat/' % (subject, mri_dataset_type, session))
 
                 path = os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session), mri_scan)
+                #name = os.path.basename(path).split('.')[0]
                 info[subjectID]['mri'].append([session_date, path])
 
     return info
@@ -65,32 +68,80 @@ def pairs_for_time_threshold(T : int, info: dict):
     #        2.) The information that we have collected by inspecting the dataset (dictionary)
 
     num_pairs = 0
+    paths_of_accepted_pairs = []
+    renamed_paired_scans = []
     for subjectID in info.keys():
         if (not info[subjectID]['pet']) or (not info[subjectID]['mri']):
             continue
         else:
             pet_dates = [x[0] for x in info[subjectID]['pet']]
+            pet_paths = [x[1] for x in info[subjectID]['pet']]
             mri_dates = [x[0] for x in info[subjectID]['mri']]
+            mri_paths = [x[1] for x in info[subjectID]['mri']]
 
-            for pet_date in pet_dates:
-                for mri_date in mri_dates:
+            for pet_date, pet_path in zip(pet_dates, pet_paths):
+                for mri_date, mri_path in zip(mri_dates,mri_paths):
                     delta = pet_date - mri_date
-                    print(mri_date)
-                    print(pet_date)
-                    print('Subject %d -> days difference: %d' % (subjectID, abs(delta.days)))
+                    #print(mri_date)#print(pet_date)#print('Subject %d -> days difference: %d' % (subjectID, abs(delta.days)))
                     if abs(delta.days) <= T:
                         num_pairs+=1
-    return num_pairs
+                        paths_of_accepted_pairs.append([mri_path, pet_path])
+                        renamed_paired_scans.appned(['%d.npy' % num_pairs, '%d.npy' % num_pairs])
 
-def main(args):
-    info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
+    return num_pairs, paths_of_accepted_pairs, renamed_paired_scans
 
+def inspect_scan(scan, name):
+    # inspect an MRI/PET scan -> 1.) Discrete values? Continuous? If discrete, what range?, what discretisation?
+    #                            2.) Dimensionality
+
+    #x is a numpy array
+    print('Scan shape: ', scan.shape())
+    flattened_scan = scan.flatten()
+    for x in flattened_scan:
+        if x % int(x) == 0:
+            continue
+        else:
+            print('Scan contains non-integer values e.g. %.3f' % x)
+            break
+
+    unique, counts = np.unique(flattened_scan, return_counts=True)
+    plt.figure()
+    plt.title('Count of unique values')
+    plt.plot(unique, counts)
+    plt.savefig('Frequency_of_unique_values_%s.png' % name)
+
+def read_scan(path):
+    scan = nib.load(path)
+    scan = scan.get_fdata()
+    return scan
+
+def plot_num_pairs_vs_acquisition_threshold(max_time_threshold, info):
     plt.figure()
     plt.title('Number of pairs as a function of time between acquistion threshold')
     time_thresholds = np.arange(1, args.max_time_threshold)
-    num_pairs = [pairs_for_time_threshold(T, info) for T in time_thresholds]
+    num_pairs = []
+    for T in time_thresholds:
+        number_of_pairs, _, _ = pairs_for_time_threshold(T, info)
+        num_pairs.append(number_of_pairs)
     plt.plot(time_thresholds, num_pairs)
     plt.savefig('num_pairs_function_of_acquistion_time_threshold.png')
+
+
+'''2'''
+# Create a function that receives as input the paired paths 
+# and copies them to the correct directory for training, validation and testing
+
+def main(args):
+    info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
+    #plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
+    
+    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(35, info)
+
+    paths1 = paths_of_accepted_pairs[0]
+    mri_path, pet_path = paths1[0], paths1[1]
+    inspect_scan(read_scan(mri_path), 'mri1')
+    inspect_scan(read_scan(pet_path), 'pet1')
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()
