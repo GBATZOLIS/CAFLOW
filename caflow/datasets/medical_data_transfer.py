@@ -43,24 +43,22 @@ def inspect_data(input_dir, output_dir, dataset_type):
 
                 try:
                     assert pet_scan in os.listdir(os.path.join(subject_dir, session, 'pet')), '%s not in the preprocessed files.' % pet_dataset_type
+                    path = os.path.join(subject_dir, session, 'pet', pet_scan)
+                    #name = os.path.basename(path).split('.')[0]
+                    info[subjectID]['pet'].append([session_date, path])
                 except AssertionError:
                     print('%s does not contain the required preprocessed file: %s in %s/pet' % (subject, pet_dataset_type, session))
 
-                path = os.path.join(subject_dir, session, 'pet', pet_scan)
-                #name = os.path.basename(path).split('.')[0]
-                info[subjectID]['pet'].append([session_date, path])
-                
             if os.path.exists(os.path.join(subject_dir, session, 'anat')):
                 mri_scan = 'T1_to_%s.nii.gz' % mri_dataset_type
 
                 try:
                     assert mri_scan in os.listdir(os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session))), '%s not in the preprocessed files.' % mri_dataset_type
+                    path = os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session), mri_scan)
+                    #name = os.path.basename(path).split('.')[0]
+                    info[subjectID]['mri'].append([session_date, path])
                 except AssertionError:
                     print('%s does not contain the required preprocessed file: %s in %s/anat/' % (subject, mri_dataset_type, session))
-
-                path = os.path.join(subject_dir, session, 'anat', '%s_%s_acq-T1w_run-1.anat' % (subject, session), mri_scan)
-                #name = os.path.basename(path).split('.')[0]
-                info[subjectID]['mri'].append([session_date, path])
 
     return info
 
@@ -99,7 +97,7 @@ def inspect_scan(scan, name):
     print('Scan shape: ', scan.shape)
     flattened_scan = scan.flatten()
     for x in flattened_scan:
-        if x % int(x) == 0:
+        if isinstance(x, int):
             continue
         else:
             print('Scan contains non-integer values e.g. %.3f' % x)
@@ -147,7 +145,7 @@ def main(args):
         info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
         save(info, 'dataset_info')
 
-    #plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
+    plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
     
     num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(35, info)
 
@@ -165,7 +163,7 @@ if __name__ == '__main__':
 
     #inspection settings
     parser.add_argument('--load-info', default=False, action='store_true', help='Load inspection info. If not loaded, it will be generated. Default=False')
-    parser.add_argument('--max-time-threshold', type=int, default=40, help='Maximum difference between MRI and PET')
+    parser.add_argument('--max-time-threshold', type=int, default=90, help='Maximum difference between MRI and PET')
 
     args = parser.parse_args()
     main(args)
