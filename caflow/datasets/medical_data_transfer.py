@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import nibabel as nib
+import pickle
 
 #input_dir = /mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet
 #output_dir = /home/gb511/MRI2PET/CAFLOW/caflow/datasets
@@ -163,7 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset-type', type=str, default='linear-MNI-sliced')
 
     #inspection settings
-    parser.add_argument('--load-info', default=False, action='store_true', help='Load inspection info. If not loaded, it will be generated. Default=False)
+    parser.add_argument('--load-info', default=False, action='store_true', help='Load inspection info. If not loaded, it will be generated. Default=False')
     parser.add_argument('--max-time-threshold', type=int, default=40, help='Maximum difference between MRI and PET')
 
     args = parser.parse_args()
