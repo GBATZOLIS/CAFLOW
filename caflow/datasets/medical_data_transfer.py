@@ -87,7 +87,7 @@ def pairs_for_time_threshold(T : int, info: dict):
                     if abs(delta.days) <= T:
                         num_pairs+=1
                         paths_of_accepted_pairs.append([mri_path, pet_path])
-                        renamed_paired_scans.appned(['%d.npy' % num_pairs, '%d.npy' % num_pairs])
+                        renamed_paired_scans.append(['%d.npy' % num_pairs, '%d.npy' % num_pairs])
 
     return num_pairs, paths_of_accepted_pairs, renamed_paired_scans
 
