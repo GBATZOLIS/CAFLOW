@@ -161,14 +161,14 @@ def main(args):
         pet_scans.append(pet_scan)
 
         scan_unique_vals['mri'], scan_unique_vals['pet'] = np.unique(mri_scan), np.unique(pet_scan)
-        for modality in ['mri', 'pet']:
+        for modality in unique_vals.keys():
             unique_vals[modality] = list(set(unique_vals[modality].extend(scan_unique_vals[modality])))
             num_unique_vals[modality].append(len(unique_vals[modality]))
     
     mri_scans, pet_scans = np.stack(mri_scans), np.stack(pet_scans)
     
     #plotting
-    for modality in ['mri', 'pet']:
+    for modality in unique_vals.keys():
         plt.figure()
         plt.title('%s unique values vs number of scans' % modality)
         plt.plot(np.arange(1,num_pairs), num_unique_vals[modality])
