@@ -153,7 +153,7 @@ def main(args):
     unique_vals = {'mri':[], 'pet':[]}
     num_unique_vals = {'mri':[], 'pet':[]}
     scan_unique_vals = {}
-    mri_scans = [], pet_scans = []
+    mri_scans, pet_scans = [], []
     for paired_path in paths_of_accepted_pairs:
         mri_path, pet_path = paired_path[0], paired_path[1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
