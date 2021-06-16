@@ -148,12 +148,47 @@ def main(args):
 
     plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
     
-    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(35, info)
+    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(30, info)
 
-    paths1 = paths_of_accepted_pairs[0]
-    mri_path, pet_path = paths1[0], paths1[1]
-    inspect_scan(read_scan(mri_path), 'mri1')
-    inspect_scan(read_scan(pet_path), 'pet1')
+    unique_vals = {'mri':[], 'pet':[]}
+    num_unique_vals = {'mri':[], 'pet':[]}
+    scan_unique_vals = {}
+    mri_scans = [], pet_scans = []
+    for paired_path in paths_of_accepted_pairs:
+        mri_path, pet_path = paired_path[0], paired_path[1]
+        mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
+        mri_scans.append(mri_scan)
+        pet_scans.append(pet_scan)
+
+        scan_unique_vals['mri'], scan_unique_vals['pet'] = np.unique(mri_scan), np.unique(pet_scan)
+        for modality in ['mri', 'pet']:
+            unique_vals[modality] = list(set(unique_vals[modality].extend(scan_unique_vals[modality])))
+            num_unique_vals[modality].append(len(unique_vals[modality]))
+    
+    mri_scans, pet_scans = np.stack(mri_scans), np.stack(pet_scans)
+    
+    #plotting
+    for modality in ['mri', 'pet']:
+        plt.figure()
+        plt.title('%s unique values vs number of scans' % modality)
+        plt.plot(np.arange(1,num_pairs), num_unique_vals[modality])
+        plt.savefig('%s_uniquevaluesvsnumberofscans.png' % modality)
+    
+    mri_unique, mri_count = np.unique(mri_scans, return_counts=True)
+    pet_unique, pet_count = np.unique(pet_scans, return_counts=True)
+
+    #mri
+    plt.figure()
+    plt.title('Count of unique values (MRI)')
+    plt.plot(mri_unique, mri_count)
+    plt.savefig('Counts_of_unique_values_MRI.png')
+    #pet
+    plt.figure()
+    plt.title('Count of unique values (PET)')
+    plt.plot(pet_unique, pet_count)
+    plt.savefig('Counts_of_unique_values_PET.png')
+
+    
 
 
 if __name__ == '__main__':
