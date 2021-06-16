@@ -179,7 +179,7 @@ def main(args):
     for modality in unique_vals.keys():
         plt.figure()
         plt.title('%s unique values vs number of scans' % modality)
-        plt.plot(np.arange(1,num_pairs), num_unique_vals[modality])
+        plt.plot(np.arange(1,len(num_unique_vals[modality])+1), num_unique_vals[modality])
         plt.savefig('%s_uniquevaluesvsnumberofscans.png' % modality)
     
     mri_unique, mri_count = np.unique(mri_scans, return_counts=True)
