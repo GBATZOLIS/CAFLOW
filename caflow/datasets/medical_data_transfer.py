@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import nibabel as nib
 import pickle
+from tqdm import tqdm
 
 #input_dir = /mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet
 #output_dir = /home/gb511/MRI2PET/CAFLOW/caflow/datasets
@@ -154,7 +155,7 @@ def main(args):
     num_unique_vals = {'mri':[], 'pet':[]}
     scan_unique_vals = {}
     mri_scans, pet_scans = [], []
-    for paired_path in paths_of_accepted_pairs:
+    for paired_path in tqdm(paths_of_accepted_pairs):
         mri_path, pet_path = paired_path[0], paired_path[1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
         mri_scans.append(mri_scan)
@@ -171,6 +172,7 @@ def main(args):
     mri_scans, pet_scans = np.stack(mri_scans), np.stack(pet_scans)
     
     #plotting
+    print('Plotting unique values vs number of scans')
     for modality in unique_vals.keys():
         plt.figure()
         plt.title('%s unique values vs number of scans' % modality)
@@ -179,7 +181,8 @@ def main(args):
     
     mri_unique, mri_count = np.unique(mri_scans, return_counts=True)
     pet_unique, pet_count = np.unique(pet_scans, return_counts=True)
-
+    
+    print('Plotting count of unique values for both modalities')
     #mri
     plt.figure()
     plt.title('Count of unique values (MRI)')
