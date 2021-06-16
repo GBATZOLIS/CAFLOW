@@ -156,11 +156,13 @@ def main(args):
     scan_unique_vals = {}
     mri_scans, pet_scans = [], []
     for i, paired_path in tqdm(enumerate(paths_of_accepted_pairs)):
+        if i>50:
+            break
+
         mri_path, pet_path = paired_path[0], paired_path[1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
-        if i<80:
-            mri_scans.append(mri_scan)
-            pet_scans.append(pet_scan)
+        mri_scans.append(mri_scan)
+        pet_scans.append(pet_scan)
 
         scan_unique_vals['mri'], scan_unique_vals['pet'] = np.unique(mri_scan), np.unique(pet_scan)
         for modality in unique_vals.keys():
