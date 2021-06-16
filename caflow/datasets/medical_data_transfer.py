@@ -191,11 +191,17 @@ def main(args):
     plt.title('Count of unique values (MRI)')
     plt.plot(mri_unique, mri_count)
     plt.savefig('Counts_of_unique_values_MRI.png')
+    print('---MRI---')
+    print('---Minimum value: %.4f - count: %d' % (mri_unique[0], mri_count[0])
+    print('---Maximum value: %.4f - count: %d' % (mri_unique[-1], mri_count[-1])
     #pet
     plt.figure()
     plt.title('Count of unique values (PET)')
     plt.plot(pet_unique, pet_count)
     plt.savefig('Counts_of_unique_values_PET.png')
+    print('---PET---')
+    print('---Minimum value: %.4f - count: %d' % (pet_unique[0], pet_count[0])
+    print('---Maximum value: %.4f - count: %d' % (pet_unique[-1], pet_count[-1])
 
     
 
