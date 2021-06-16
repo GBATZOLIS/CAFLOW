@@ -162,13 +162,9 @@ def main(args):
 
         scan_unique_vals['mri'], scan_unique_vals['pet'] = np.unique(mri_scan), np.unique(pet_scan)
         for modality in unique_vals.keys():
-            print(modality)
-            extended_unique_vals = unique_vals[modality].extend(scan_unique_vals[modality])
-            print(extended_unique_vals)
-            unique_extended = set(extended_unique_vals)
-            print(unique_extended)
-            unique_extended = list(unique_extended)
-            print(unique_extended)
+            extended_unique_vals = unique_vals[modality].copy()
+            extended_unique_vals.extend(scan_unique_vals[modality])
+            unique_extended = list(set(extended_unique_vals))
             unique_vals[modality] = unique_extended
             num_unique_vals[modality].append(len(unique_vals[modality]))
     
