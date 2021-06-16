@@ -100,10 +100,11 @@ def inspect_scan(scan, name):
         if isinstance(x, int):
             continue
         else:
-            print('Scan contains non-integer values e.g. %.3f' % x)
+            print('Scan contains non-integer values e.g. %.9f' % x)
             break
 
     unique, counts = np.unique(flattened_scan, return_counts=True)
+    print(unique)
     plt.figure()
     plt.title('Count of unique values')
     plt.plot(unique, counts)
