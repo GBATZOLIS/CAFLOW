@@ -200,8 +200,8 @@ def main(args):
     plt.plot(pet_unique, pet_count)
     plt.savefig('Counts_of_unique_values_PET.png')
     print('---PET---')
-    print('---Minimum value: %.4f - count: %d' % (pet_unique[0], pet_count[0])
-    print('---Maximum value: %.4f - count: %d' % (pet_unique[-1], pet_count[-1])
+    print('---Minimum value: %.4f - count: %d' % (pet_unique[0], pet_count[0]))
+    print('---Maximum value: %.4f - count: %d' % (pet_unique[-1], pet_count[-1]))
 
     
 
