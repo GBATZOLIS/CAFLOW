@@ -209,6 +209,9 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
     for i, index in tqdm(enumerate(permuted_indices)):
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
+        mri_scan[mri_scan<10**(-6)]=10**(-6)*np.random.rand()
+        pet_scan[pet_scan<10**(-6)]=10**(-6)*np.random.rand()
+
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
 
         resized_mri_scan = zoom(mri_scan, zoom = [target_resolution[x]/mri_scan_shape[x] for x in range(len(mri_scan_shape))])
