@@ -51,7 +51,7 @@ class TemplateDataset(BaseDataset):
         if self.file_extension in ['.jpg', '.png']:
             transform_list = [transforms.ToTensor(), discretize]
         elif self.file_extension in ['.npy']:
-            transform_list = [transforms.ToTensor()]
+            transform_list = [torch.from_numpy]
         else:
             raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
 
