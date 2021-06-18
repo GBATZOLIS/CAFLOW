@@ -247,7 +247,7 @@ def main(args):
     plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
     
     num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(30, info)
-    prepare_training_dataset(paths_of_accepted_pairs, renamed_paired_scans)
+    prepare_training_dataset(args.output_dir, paths_of_accepted_pairs, renamed_paired_scans)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
