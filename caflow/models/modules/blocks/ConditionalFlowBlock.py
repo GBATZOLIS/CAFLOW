@@ -11,7 +11,7 @@ from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, ConditionalAffineTransform
 import FrEIA.modules as Fm
-from caflow.utils.processing import squeeze
+from caflow.utils.processing import squeeze, general_squeeze
 from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
 
 class g_S(nn.Module):
@@ -77,7 +77,7 @@ class g_S(nn.Module):
         h = (h,)
         for layer in self.layers:
             if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
-                h, jac = layer(h, c=[squeeze(L), squeeze(D)], rev=False)
+                h, jac = layer(h, c=[general_squeeze(L), general_squeeze(D)], rev=False)
             else:
                 h, jac = layer(h, rev=False)
 
@@ -89,7 +89,7 @@ class g_S(nn.Module):
         h = (h,)
         for layer in reversed(self.layers):
             if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
-                h, jac = layer(h, c=[squeeze(L), squeeze(D)], rev=True)
+                h, jac = layer(h, c=[general_squeeze(L), general_squeeze(D)], rev=True)
             else:
                 h, jac = layer(h, rev=True)
 
@@ -157,7 +157,7 @@ class g_I(nn.Module):
         h = (h,)
         for layer in self.layers:
             if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
-                h, jac = layer(h, c=[squeeze(D)], rev=False)
+                h, jac = layer(h, c=[general_squeeze(D)], rev=False)
             else:
                 h, jac = layer(h, rev=False)
 
@@ -169,7 +169,7 @@ class g_I(nn.Module):
         h = (h,)
         for layer in reversed(self.layers):
             if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
-                h, jac = layer(h, c=[squeeze(D)], rev=True)
+                h, jac = layer(h, c=[general_squeeze(D)], rev=True)
             else:
                 h, jac = layer(h, rev=True)
 

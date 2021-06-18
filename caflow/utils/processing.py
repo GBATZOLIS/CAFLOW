@@ -9,6 +9,13 @@ def concat_elu(x):
 def safe_log(x):
     return torch.log(x.clamp(min=1e-22))
 
+def general_squeeze(x):
+    original_shape = x.shape
+    dim = len(original_shape[2:])
+    squeezed_shape = (original_shape[0], 2**dim*original_shape[1],) + tuple([x//2 for x in original_shape[2:]])
+    x = torch.reshape(x, squeezed_shape)
+    return x
+
 def squeeze(x):
     ##-> provide the squeezing code for three dimensions as well
 
