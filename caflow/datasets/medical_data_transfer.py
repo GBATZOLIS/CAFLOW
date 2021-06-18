@@ -9,7 +9,8 @@ from argparse import ArgumentParser
 import nibabel as nib
 import pickle
 from tqdm import tqdm
-
+from scipy.ndimage import zoom
+from pathlib import Path
 #input_dir = /mnt/zfs/Cohort_Raw_Data/ALL_ADNI/T1wPET/t12pet
 #output_dir = /home/gb511/MRI2PET/CAFLOW/caflow/datasets
 def inspect_data(input_dir, output_dir, dataset_type):
@@ -195,11 +196,45 @@ def inspect_data_values(paths_of_accepted_pairs):
 # Create a function that receives as input the paired paths 
 # and copies them to the correct directory for training, validation and testing
 
-def prepare_training_dataset(read_paths, save_names, target_resolution=(96,96,96)):
-    for i, paired_path in tqdm(enumerate(read_paths)):
-        mri_path, pet_path = paired_path[0], paired_path[1]
+def prepare_training_dataset(output_dir, read_paths, save_names, target_resolution=(96,96,96), split=[0.8, 0.1, 0.1]):
+    Path(os.path.join(output_dir, 'mri2pet', 'train', 'A')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet', 'train', 'B')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet', 'val', 'A')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet', 'val', 'B')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet', 'test', 'A')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet', 'test', 'B')).mkdir(parents=True, exist_ok=True)
+
+    num_pairs = len(read_paths)
+    permuted_indices = np.random.permutation(num_pairs)
+    for i, index in tqdm(enumerate(permuted_indices)):
+        mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
-        print(mri_scan.shape, pet_scan.shape)
+        mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
+
+        resized_mri_scan = zoom(mri_scan, zoom = [target_resolution[x]/mri_scan_shape[x] for x in range(len(mri_scan_shape))])
+        reshaped_mri_scan = np.expand_dims(resized_mri_scan, axis=0)
+
+        resized_pet_scan = zoom(pet_scan, zoom = [target_resolution[x]/pet_scan_shape[x] for x in range(len(pet_scan_shape))])
+        reshaped_pet_scan = np.expand_dims(resized_pet_scan, axis=0)
+
+        if i < int(split[0]*num_pairs):
+            #save under train
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'A', save_names[index])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'B', save_names[index])
+            np.save(mri_save_path, reshaped_mri_scan)
+            np.save(pet_save_path, reshaped_pet_scan)
+        elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
+            # save under val
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'A', save_names[index])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'B', save_names[index])
+            np.save(mri_save_path, reshaped_mri_scan)
+            np.save(pet_save_path, reshaped_pet_scan)
+        else:
+            #save under test
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'A', save_names[index])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'B', save_names[index])
+            np.save(mri_save_path, reshaped_mri_scan)
+            np.save(pet_save_path, reshaped_pet_scan)
 
 
 def main(args):
