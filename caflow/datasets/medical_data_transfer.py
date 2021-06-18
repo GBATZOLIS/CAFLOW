@@ -219,20 +219,20 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
 
         if i < int(split[0]*num_pairs):
             #save under train
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'A', save_names[index])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'B', save_names[index])
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'A', save_names[index][0])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'B', save_names[index][1])
             np.save(mri_save_path, reshaped_mri_scan)
             np.save(pet_save_path, reshaped_pet_scan)
         elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
             # save under val
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'A', save_names[index])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'B', save_names[index])
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'A', save_names[index][0])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'B', save_names[index][1])
             np.save(mri_save_path, reshaped_mri_scan)
             np.save(pet_save_path, reshaped_pet_scan)
         else:
             #save under test
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'A', save_names[index])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'B', save_names[index])
+            mri_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'A', save_names[index][0])
+            pet_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'B', save_names[index][1])
             np.save(mri_save_path, reshaped_mri_scan)
             np.save(pet_save_path, reshaped_pet_scan)
 
