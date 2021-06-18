@@ -166,32 +166,37 @@ class CAFlow(pl.LightningModule):
         
         B = I.shape[0]
         if batch_idx==0:
-            raw_length = 1+self.num_val_samples+1
-            all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
-            
-            for i in range(B):
-                all_images[i*raw_length] = Y[i]
-                all_images[(i+1)*raw_length-1] = I[i]
-            
-            for sampling_T in self.sampling_temperatures:
-                # generate images
-                with torch.no_grad():
-                    for j in range(1, self.num_val_samples+1):
-                        sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
-                        for i in range(B):
-                            all_images[i*raw_length+j]=sampled_image[i]
+            if self.dim == 2:
+                raw_length = 1+self.num_val_samples+1
+                all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
                 
-                grid = torchvision.utils.make_grid(
-                    tensor=all_images,
-                    nrow = raw_length, #Number of images displayed in each row of the grid
-                    padding=self.sample_padding,
-                    normalize=self.sample_normalize,
-                    range=self.sample_norm_range,
-                    scale_each=self.sample_scale_each,
-                    pad_value=self.sample_pad_value,
-                )
-                str_title = 'val_samples_epoch_%d_T_%.2f' % (self.current_epoch, sampling_T)
-                self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+                for i in range(B):
+                    all_images[i*raw_length] = Y[i]
+                    all_images[(i+1)*raw_length-1] = I[i]
+                
+                for sampling_T in self.sampling_temperatures:
+                    # generate images
+                    with torch.no_grad():
+                        for j in range(1, self.num_val_samples+1):
+                            sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
+                            for i in range(B):
+                                all_images[i*raw_length+j]=sampled_image[i]
+                    
+                    grid = torchvision.utils.make_grid(
+                        tensor=all_images,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=self.sample_padding,
+                        normalize=self.sample_normalize,
+                        range=self.sample_norm_range,
+                        scale_each=self.sample_scale_each,
+                        pad_value=self.sample_pad_value,
+                    )
+                    str_title = 'val_samples_epoch_%d_T_%.2f' % (self.current_epoch, sampling_T)
+                    self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+            
+            elif self.dim == 3:
+                print('Visualisation code yet to be implemented')
+
 
     def configure_optimizers(self,):
         class scheduler_lambda_function:
