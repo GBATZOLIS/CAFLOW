@@ -12,6 +12,7 @@ from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, ConditionalAffineTransform
 import FrEIA.modules as Fm
 from caflow.utils.processing import squeeze
+from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
 
 class g_S(nn.Module):
     def __init__(self, channels, dim, resolution, depth, nn_settings, last_scale):
@@ -25,7 +26,7 @@ class g_S(nn.Module):
 
         self.layers = nn.ModuleList()
         
-        self.layers.append(Fm.IRevNetDownsampling(dims_in=[(channels,)+resolution]))
+        self.layers.append(SqueezeLayer(channels, dim))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
@@ -110,7 +111,7 @@ class g_I(nn.Module):
 
         self.layers = nn.ModuleList()
         
-        self.layers.append(Fm.IRevNetDownsampling(dims_in=[(channels,)+resolution]))
+        self.layers.append(SqueezeLayer(channels, dim))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)

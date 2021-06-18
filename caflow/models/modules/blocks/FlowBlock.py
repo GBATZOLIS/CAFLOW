@@ -18,6 +18,8 @@ from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 import FrEIA.modules as Fm
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
+from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
+
 
 class FlowBlock(nn.Module):
     def __init__(self, channels, dim, resolution, depth, coupling_type, nn_settings):
@@ -31,7 +33,7 @@ class FlowBlock(nn.Module):
 
         self.layers = nn.ModuleList()
 
-        self.layers.append(Fm.IRevNetDownsampling(dims_in=[(channels,)+resolution]))
+        self.layers.append(SqueezeLayer(channels, dim))
         #new shape: 3D -> (8*channels, X/2, Y/2, Z/2)
         #           2D -> (4*channels, X/2, Y/2)
         #           1D -> (2*channels, X/2)
