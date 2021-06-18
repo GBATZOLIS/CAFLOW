@@ -166,8 +166,6 @@ def create_dataset(master_path='caflow/datasets/edges2shoes', resize_size=32, da
                     # ------ save ------
                     A.save(os.path.join(master_path, phase, 'A', basename))
                     B.save(os.path.join(master_path, phase, 'B', basename))
-
-
                     
 
 

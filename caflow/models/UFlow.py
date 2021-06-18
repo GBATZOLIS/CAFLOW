@@ -14,7 +14,12 @@ class UFlow(pl.LightningModule):
         self.dim = opts.data_dim
         self.scales = opts.model_scales
         self.channels = opts.data_channels
-        self.resolution = [opts.load_size for _ in range(self.dim)]
+
+        if len(opts.resolution) > 1 :
+            self.resolution = opts.resolution
+        else: 
+            self.resolution = [opts.resolution[0] for _ in range(self.dim)]
+
         self.total_dims = self.channels*np.prod(self.resolution) #-->addition
 
         #validation sampling settings
@@ -25,9 +30,10 @@ class UFlow(pl.LightningModule):
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
 
-        self.uflow = UnconditionalFlow(channels=opts.data_channels, dim=opts.data_dim, resolution=opts.load_size, scales=opts.model_scales, 
-                                      scale_depth=opts.rflow_scale_depth, quants=opts.r_quants, vardeq_depth=opts.vardeq_depth, coupling_type=opts.coupling_type,
-                                      nn_settings=self.create_nn_settings(opts))
+        self.uflow = UnconditionalFlow(channels=self.channels, dim=self.dim, resolution=self.resolution, scales=opts.model_scales, 
+                                       scale_depth=opts.rflow_scale_depth, use_dequantisation=opts.use_dequantisation, \
+                                       quants=opts.r_quants, vardeq_depth=opts.vardeq_depth, coupling_type=opts.coupling_type,
+                                       nn_settings=self.create_nn_settings(opts))
         
         #set the prior distribution for the latents
         self.prior = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
@@ -40,7 +46,7 @@ class UFlow(pl.LightningModule):
     def create_nn_settings(self, opts):
         nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.UFLOW_c_hidden_factor, \
             'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
-            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
+            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor, 'dim':opts.data_dim}
         return nn_settings
 
     def forward(self, y=None, z=[], logprior=0., logdet=0., reverse=False):

@@ -159,8 +159,9 @@ class AffineCouplingOneSided(_BaseCouplingBlock):
         nn_type = nn_settings['nn_type']
         if nn_type == 'SimpleConvNet':
             c_hidden_factor = nn_settings['c_hidden_factor']
+            dim = nn_settings['dim']
             self.subnet = subnet_constructor(c_in=self.split_len1 + self.condition_length, \
-                                        c_out = 2 * self.split_len2, c_hidden_factor=c_hidden_factor)
+                                        c_out = 2 * self.split_len2, c_hidden_factor=c_hidden_factor, dim=dim)
         elif nn_type == 'nnflowpp':
             coupling = 'Affine'
             in_channels = self.split_len1 + self.condition_length
@@ -242,8 +243,9 @@ class ConditionalAffineTransform(_BaseCouplingBlock):
         nn_type = nn_settings['nn_type']
         if nn_type == 'SimpleConvNet':
             c_hidden_factor = nn_settings['c_hidden_factor']
+            dim = nn_settings['dim']
             self.subnet = subnet_constructor(c_in=self.condition_length, \
-                                        c_out = 2 * self.channels, c_hidden_factor=c_hidden_factor)
+                                        c_out = 2 * self.channels, c_hidden_factor=c_hidden_factor, dim=dim)
         elif nn_type == 'nnflowpp':
             coupling = 'Affine'
             in_channels = self.condition_length

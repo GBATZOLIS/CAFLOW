@@ -31,8 +31,14 @@ class CAFlow(pl.LightningModule):
             self.val_shortcut = opts.val_shortcut
 
         self.dim = opts.data_dim
-        self.scales = opts.model_scales
         self.channels = opts.data_channels
+        
+        if len(opts.resolution) > 1 :
+            self.resolution = opts.resolution
+        else: 
+            self.resolution = [opts.resolution[0] for _ in range(self.dim)]
+
+        self.scales = opts.model_scales
         
         #validation conditional sampling settings
         self.num_val_samples = opts.num_val_samples #num of validation samples
@@ -63,7 +69,7 @@ class CAFlow(pl.LightningModule):
         if opts.shared:
             self.model['SharedConditionalFlow'] = SharedConditionalFlow(channels=opts.data_channels, 
                                                                         dim=opts.data_dim,
-                                                                        resolution = [opts.load_size for _ in range(self.dim)],
+                                                                        resolution = self.resolution,
                                                                         scales=opts.model_scales, 
                                                                         shared_scale_depth=opts.s_cond_s_scale_depth, 
                                                                         unshared_scale_depth=opts.s_cond_u_scale_depth,
@@ -71,7 +77,7 @@ class CAFlow(pl.LightningModule):
         else:
             self.model['UnsharedConditionalFlow'] = UnsharedConditionalFlow(channels=opts.data_channels, 
                                                                             dim=opts.data_dim, 
-                                                                            resolution = [opts.load_size for _ in range(self.dim)],
+                                                                            resolution = self.resolution,
                                                                             scales=opts.model_scales, 
                                                                             scale_depth=opts.u_cond_scale_depth,
                                                                             nn_settings=self.create_nn_settings(opts))
@@ -89,8 +95,6 @@ class CAFlow(pl.LightningModule):
         #optimiser settings
         self.learning_rate = opts.learning_rate
         self.level_off_factor = opts.level_off_factor
-        self.level_off_step = opts.level_off_step
-        self.level_off_step2 = opts.level_off_step2
         self.level_off_steps = opts.level_off_steps
         self.use_warm_up = opts.use_warm_up
         self.warm_up = opts.warm_up
@@ -100,7 +104,7 @@ class CAFlow(pl.LightningModule):
     def create_nn_settings(self, opts):
         nn_settings={'nn_type':opts.nn_type, 'c_hidden_factor':opts.CAFLOW_c_hidden_factor, \
             'drop_prob':opts.drop_prob, 'num_blocks':opts.num_blocks, 'use_attn':opts.use_attn,\
-            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor}
+            'num_components':opts.num_components, 'num_channels_factor':opts.num_channels_factor, 'dim':opts.data_dim}
         return nn_settings
 
     def forward(self, Y, shortcut=True):
@@ -132,10 +136,6 @@ class CAFlow(pl.LightningModule):
         if self.lambda_rec is not None:
             D, z_cond = encodings[0], encodings[1]
             z_normal = self.generate_z_cond(D[0], shortcut=False)
-
-            #print('z_normal[-1], ', z_normal[-1])
-            #print('z_cond[-1], ', z_cond[-1])
-            #assert len(z_normal[-1])==len(z_cond[-1])==1
             z_normal[-1][0] = z_cond[-1][0].clone()
             del z_cond
 

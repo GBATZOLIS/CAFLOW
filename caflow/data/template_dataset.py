@@ -18,6 +18,7 @@ import torchvision.transforms as transforms
 # from data.image_folder import make_dataset
 from PIL import Image
 import torch
+import numpy as np
 
 def discretize(sample):
     return (sample * 255).to(torch.float32)
@@ -43,26 +44,51 @@ class TemplateDataset(BaseDataset):
 
         # get the image paths of your dataset;
         self.image_paths = load_image_paths(opts.dataroot, phase)
+        _, file_extension = os.path.splitext(self.image_paths['A'][0])
+        self.file_extension = file_extension
 
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
-        #self.transform = get_transform(opts)
-        #transform_list = [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-        transform_list = [transforms.ToTensor(), discretize]
+        if self.file_extension in ['.jpg', '.png']:
+            transform_list = [transforms.ToTensor(), discretize]
+        elif self.file_extension in ['.npy']:
+            transform_list = [transforms.ToTensor()]
+        else:
+            raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
+
         self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):
         if self.domain is None:
             A_path = self.image_paths['A'][index]
             B_path = self.image_paths['B'][index]
-            A = Image.open(A_path).convert('RGB')
-            B = Image.open(B_path).convert('RGB')
+
+            #load the paired images/scans
+            if self.file_extension in ['.jpg', '.png']:
+                A = Image.open(A_path).convert('RGB')
+                B = Image.open(B_path).convert('RGB')
+            elif self.file_extension in ['.npy']:
+                A = np.load(A_path)
+                B = np.load(B_path)
+            else:
+                raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
+            
+            #transform the images/scans
             A_transformed = self.transform(A)
             B_transformed = self.transform(B)
+
             return A_transformed, B_transformed
         else:
             path = self.image_paths[self.domain][index]
-            img = Image.open(path).convert('RGB')
+
+            #load the image/scan
+            if self.file_extension in ['.jpg', '.png']:
+                img = Image.open(path).convert('RGB')
+            elif self.file_extension in ['.npy']:
+                img = np.load(path)
+
+            #transform the image/scan
             img_transformed = self.transform(img)
+            
             return img_transformed
         
     def __len__(self):

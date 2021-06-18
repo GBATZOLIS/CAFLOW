@@ -135,22 +135,7 @@ def load(name):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
 
-
-'''2'''
-# Create a function that receives as input the paired paths 
-# and copies them to the correct directory for training, validation and testing
-
-def main(args):
-    if args.load_info:
-        info = load('dataset_info')
-    else:
-        info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
-        save(info, 'dataset_info')
-
-    plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
-    
-    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(30, info)
-
+def inspect_data_values(paths_of_accepted_pairs):
     unique_vals = {'mri':[], 'pet':[]}
     num_unique_vals = {'mri':[], 'pet':[]}
     scan_unique_vals = {}
@@ -205,8 +190,29 @@ def main(args):
     print('---Just above Minimum value: %.12f - count: %d' % (pet_unique[1], pet_count[1]))
     print('---Maximum value: %.12f - count: %d' % (pet_unique[-1], pet_count[-1]))
 
-    
 
+'''2'''
+# Create a function that receives as input the paired paths 
+# and copies them to the correct directory for training, validation and testing
+
+def prepare_training_dataset(read_paths, save_names, target_resolution=(96,96,96)):
+    for i, paired_path in tqdm(enumerate(read_paths)):
+        mri_path, pet_path = paired_path[0], paired_path[1]
+        mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
+        print(mri_scan.shape, pet_scan.shape)
+
+
+def main(args):
+    if args.load_info:
+        info = load('dataset_info')
+    else:
+        info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
+        save(info, 'dataset_info')
+
+    plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
+    
+    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(30, info)
+    prepare_training_dataset(paths_of_accepted_pairs, renamed_paired_scans)
 
 if __name__ == '__main__':
     parser = ArgumentParser()

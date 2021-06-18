@@ -22,8 +22,9 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 import torch.optim as optim
 
 def main(hparams):
-    create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
-                   dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, mask_to_area=hparams.mask_to_area, sr_factor=hparams.sr_factor)
+    if hparams.create_dataset:
+        create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
+                       dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, mask_to_area=hparams.mask_to_area, sr_factor=hparams.sr_factor)
 
     if hparams.pretrain in ['A', 'B']:
         train_dataset = TemplateDataset(hparams, phase='train', domain=hparams.pretrain)
@@ -132,8 +133,6 @@ if __name__ == '__main__':
     #optimiser-scheduler settings
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='initial learning rate')
     parser.add_argument('--level_off_factor', type=float, default=0.1, help='level-off reducing factor')
-    parser.add_argument('--level_off_step', type=int, default=70000)
-    parser.add_argument('--level_off_step2', type=int, default=140000)
     parser.add_argument('--level_off_steps', type=int, nargs="+", help='List of training steps to reduce the learning rate.')
 
     parser.add_argument('--use-warm-up', type=bool, default=True)
@@ -142,9 +141,6 @@ if __name__ == '__main__':
     parser.add_argument('--use-ema', default=False, action='store_true', help='whether to use exponential moving average for the model parameters.')
     
     #model specific arguments
-    parser.add_argument('--data-dim', type=int, default=2)
-    parser.add_argument('--data-channels', type=int, default=3)
-
     parser.add_argument('--shared', default=False, action='store_true', help='Set shared to True if want to use shared conditional flow instead of normal conditional flow.')
     parser.add_argument('--train-shortcut', default=True, type=bool, help='Use the training shortcut if a shared conditional architecture is used.')
     parser.add_argument('--val-shortcut', default=True, type=bool, help='Same as the train-shorcut but for the validation loop.')
@@ -156,6 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--s-cond-s-scale-depth', type=int, default=12, help='shared conditional shared scale depth')
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=16, help='shared conditional unshared scale depth')
     
+    parser.add_argument('--use-dequantisation', default=False, action='store_true')
     parser.add_argument('--vardeq-depth', type=int, default=0, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')
     parser.add_argument('--t-quants', type=int, default=256, help='number of quantisation levels of the conditioned image (T in the paper)')
@@ -197,10 +194,13 @@ if __name__ == '__main__':
     parser.add_argument('--val-workers', type=int, default=4, help='val_workers')
     
     #the rest are related to the specific dataset and the required transformations
+    parser.add_argument('--create-dataset', default=False, action='store_true')
     parser.add_argument('--dataset-style', type=str, default='image2image', help='identifier of the stored structure of the dataset')
     parser.add_argument('--max-dataset-size', type=int, default=40000, help='Maximum number of samples allowed per dataset. \
                                                                                 Set to float("inf") if you want to use the entire training dataset')
-    parser.add_argument('--load-size', type=int, default=64)
+    parser.add_argument('--data-dim', type=int, default=2)
+    parser.add_argument('--data-channels', type=int, default=3)
+    parser.add_argument('--resolution', nargs='+', type=int, default=[64])
     parser.add_argument('--preprocess', default=['resize'])
     parser.add_argument('--no-flip', default=True, action='store_false', help='if specified, do not flip the images for data argumentation')
     parser.add_argument('--mask-to-area', type=float, default=0.15, help='Mask to total area ratio in impainting tasks.')
