@@ -8,7 +8,7 @@ class SqueezeLayer(nn.Module):
     
     def forward(self, x, rev=False):
         if not rev:
-            x = self.i_squeezelayer(x)
+            x = self.i_squeezelayer(x[0])
         else:
-            x = self.i_squeezelayer.inverse(x)
-        return x, 0.
+            x = self.i_squeezelayer.inverse(x[0])
+        return (x,), 0.
