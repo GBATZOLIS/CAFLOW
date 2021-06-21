@@ -201,36 +201,34 @@ class CAFlow(pl.LightningModule):
                     a /= torch.max(a)
                     return a
 
-                #Y, I shape: (batchsize, x1, x2, x3) - (0, 1, 2, 3)
-                print('Visualisation code yet to be implemented')
+                #Y, I shape: (batchsize, 1, x1, x2, x3) - (0, 1, 2, 3, 4)
+
                 #We are going to display slices of the 3D reconstructed PET image. 
                 #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
 
                 raw_length = 1 + self.num_val_samples + 1
-                dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
-                dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[1], I.shape[3]]))
-                dim3cut = torch.zeros(tuple([B*raw_length, 1, I.shape[1], I.shape[2]]))
+                dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]]))
+                dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]]))
+                dim3cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
 
                 for i in range(B):
-                    print(dim1cut[i*raw_length].size())
-                    print(normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0).size())
-                    dim1cut[i*raw_length] = normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0)
-                    dim1cut[(i+1)*raw_length-1] = normalise(I[i, Y.shape[1]//2, :, :]).unsqueeze(0)
-                    dim2cut[i*raw_length] = normalise(Y[i, :, Y.shape[2]//2, :]).unsqueeze(0)
-                    dim2cut[(i+1)*raw_length-1] = normalise(I[i, :, Y.shape[2]//2, :]).unsqueeze(0)
-                    dim3cut[i*raw_length] = normalise(Y[i, :, :, Y.shape[3]//2]).unsqueeze(0)
-                    dim3cut[(i+1)*raw_length-1] = normalise(I[i, :, :, Y.shape[3]//2]).unsqueeze(0)
-                
+                    dim1cut[i*raw_length] = normalise(Y[i, 0, Y.shape[2]//2, :, :]).unsqueeze(0)
+                    dim1cut[(i+1)*raw_length-1] = normalise(I[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
+                    dim2cut[i*raw_length] = normalise(Y[i, 0, :, Y.shape[3]//2, :]).unsqueeze(0)
+                    dim2cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
+                    dim3cut[i*raw_length] = normalise(Y[i, 0, :, :, Y.shape[4]//2]).unsqueeze(0)
+                    dim3cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
+
                 for sampling_T in self.sampling_temperatures:
                     # generate images
                     with torch.no_grad():
                         for j in range(1, self.num_val_samples+1):
                             sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
                             for i in range(B):
-                                dim1cut[i*raw_length+j] = normalise(sampled_image[i, Y.shape[1]//2, :, :]).unsqueeze(0)
-                                dim2cut[i*raw_length+j] = normalise(sampled_image[i, :, Y.shape[2]//2, :]).unsqueeze(0)
-                                dim3cut[i*raw_length+j] = normalise(sampled_image[i, :, :, Y.shape[3]//2]).unsqueeze(0)
-
+                                dim1cut[i*raw_length+j] = normalise(sampled_image[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
+                                dim2cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
+                                dim3cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
+                    
                     #--------------------------------------------------------------------------------------------
                     grid = torchvision.utils.make_grid(tensor=dim1cut,
                         nrow = raw_length, #Number of images displayed in each row of the grid
