@@ -212,9 +212,9 @@ class CAFlow(pl.LightningModule):
                 dim3cut = torch.zeros(tuple([B*raw_length, 1, I.shape[1], I.shape[2]]))
 
                 for i in range(B):
-                    dim1cut[i*raw_length] = normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0)
                     print(dim1cut[i*raw_length].size())
                     print(normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0).size())
+                    dim1cut[i*raw_length] = normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0)
                     dim1cut[(i+1)*raw_length-1] = normalise(I[i, Y.shape[1]//2, :, :]).unsqueeze(0)
                     dim2cut[i*raw_length] = normalise(Y[i, :, Y.shape[2]//2, :]).unsqueeze(0)
                     dim2cut[(i+1)*raw_length-1] = normalise(I[i, :, Y.shape[2]//2, :]).unsqueeze(0)
