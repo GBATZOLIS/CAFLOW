@@ -195,7 +195,75 @@ class CAFlow(pl.LightningModule):
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
             
             elif self.dim == 3:
+                def normalise(A):
+                    A -= torch.min(A)
+                    A /= torch.max(A)
+                    return A
+
+                #Y, I shape: (batchsize, x1, x2, x3) - (0, 1, 2, 3)
                 print('Visualisation code yet to be implemented')
+                #We are going to display slices of the 3D reconstructed PET image. 
+                #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
+
+                raw_length = 1 + self.num_val_samples + 1
+                dim1cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[2], I.shape[3]))
+                dim2cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[1], I.shape[3]))
+                dim3cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[1], I.shape[2]))
+
+                for i in range(B):
+                    dim1cut[i*raw_length] = normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0)
+                    dim1cut[(i+1)*raw_length-1] = normalise(I[i, Y.shape[1]//2, :, :]).unsqueeze(0)
+                    dim2cut[i*raw_length] = normalise(Y[i, :, Y.shape[1]//2, :]).unsqueeze(0)
+                    dim2cut[(i+1)*raw_length-1] = normalise(I[i, :, Y.shape[1]//2, :]).unsqueeze(0)
+                    dim3cut[i*raw_length] = normalise(Y[i, :, :, Y.shape[1]//2]).unsqueeze(0)
+                    dim3cut[(i+1)*raw_length-1] = normalise(I[i, :, :, Y.shape[1]//2]).unsqueeze(0)
+                
+                for sampling_T in self.sampling_temperatures:
+                    # generate images
+                    with torch.no_grad():
+                        for j in range(1, self.num_val_samples+1):
+                            sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
+                            for i in range(B):
+                                dim1cut[i*raw_length+j] = normalise(sampled_image[i, Y.shape[1]//2, :, :]).unsqueeze(0)
+                                dim2cut[i*raw_length+j] = normalise(sampled_image[i, :, Y.shape[1]//2, :]).unsqueeze(0)
+                                dim3cut[i*raw_length+j] = normalise(sampled_image[i, :, :, Y.shape[1]//2]).unsqueeze(0)
+
+                    #--------------------------------------------------------------------------------------------
+                    grid = torchvision.utils.make_grid(tensor=dim1cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=self.sample_padding,
+                        normalize=self.sample_normalize,
+                        range=self.sample_norm_range,
+                        scale_each=self.sample_scale_each,
+                        pad_value=self.sample_pad_value,
+                    )
+                    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim1' % (self.current_epoch, sampling_T)
+                    self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+
+                    #--------------------------------------------------------------------------------------------
+                    grid = torchvision.utils.make_grid(tensor=dim2cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=self.sample_padding,
+                        normalize=self.sample_normalize,
+                        range=self.sample_norm_range,
+                        scale_each=self.sample_scale_each,
+                        pad_value=self.sample_pad_value,
+                    )
+                    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim2' % (self.current_epoch, sampling_T)
+                    self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+
+                    #--------------------------------------------------------------------------------------------
+                    grid = torchvision.utils.make_grid(tensor=dim3cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=self.sample_padding,
+                        normalize=self.sample_normalize,
+                        range=self.sample_norm_range,
+                        scale_each=self.sample_scale_each,
+                        pad_value=self.sample_pad_value,
+                    )
+                    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (self.current_epoch, sampling_T)
+                    self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+                    #--------------------------------------------------------------------------------------------
 
 
     def configure_optimizers(self,):
