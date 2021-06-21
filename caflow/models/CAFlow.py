@@ -164,7 +164,7 @@ class CAFlow(pl.LightningModule):
         val_rec_loss = torch.mean(torch.abs(I-I_sample))
         self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
         
-        B = I.shape[0]
+        B = Y.shape[0]
         if batch_idx==0:
             if self.dim == 2:
                 raw_length = 1+self.num_val_samples+1
@@ -196,9 +196,10 @@ class CAFlow(pl.LightningModule):
             
             elif self.dim == 3:
                 def normalise(A):
-                    A -= torch.min(A)
-                    A /= torch.max(A)
-                    return A
+                    a = A.clone()
+                    a -= torch.min(a)
+                    a /= torch.max(a)
+                    return a
 
                 #Y, I shape: (batchsize, x1, x2, x3) - (0, 1, 2, 3)
                 print('Visualisation code yet to be implemented')
@@ -206,17 +207,17 @@ class CAFlow(pl.LightningModule):
                 #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
 
                 raw_length = 1 + self.num_val_samples + 1
-                dim1cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[2], I.shape[3]))
-                dim2cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[1], I.shape[3]))
-                dim3cut = torch.zeros(tuple([B*raw_length,]) + (1, I.shape[1], I.shape[2]))
+                dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
+                dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[1], I.shape[3]]))
+                dim3cut = torch.zeros(tuple([B*raw_length, 1, I.shape[1], I.shape[2]]))
 
                 for i in range(B):
                     dim1cut[i*raw_length] = normalise(Y[i, Y.shape[1]//2, :, :]).unsqueeze(0)
                     dim1cut[(i+1)*raw_length-1] = normalise(I[i, Y.shape[1]//2, :, :]).unsqueeze(0)
-                    dim2cut[i*raw_length] = normalise(Y[i, :, Y.shape[1]//2, :]).unsqueeze(0)
-                    dim2cut[(i+1)*raw_length-1] = normalise(I[i, :, Y.shape[1]//2, :]).unsqueeze(0)
-                    dim3cut[i*raw_length] = normalise(Y[i, :, :, Y.shape[1]//2]).unsqueeze(0)
-                    dim3cut[(i+1)*raw_length-1] = normalise(I[i, :, :, Y.shape[1]//2]).unsqueeze(0)
+                    dim2cut[i*raw_length] = normalise(Y[i, :, Y.shape[2]//2, :]).unsqueeze(0)
+                    dim2cut[(i+1)*raw_length-1] = normalise(I[i, :, Y.shape[2]//2, :]).unsqueeze(0)
+                    dim3cut[i*raw_length] = normalise(Y[i, :, :, Y.shape[3]//2]).unsqueeze(0)
+                    dim3cut[(i+1)*raw_length-1] = normalise(I[i, :, :, Y.shape[3]//2]).unsqueeze(0)
                 
                 for sampling_T in self.sampling_temperatures:
                     # generate images
@@ -225,8 +226,8 @@ class CAFlow(pl.LightningModule):
                             sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
                             for i in range(B):
                                 dim1cut[i*raw_length+j] = normalise(sampled_image[i, Y.shape[1]//2, :, :]).unsqueeze(0)
-                                dim2cut[i*raw_length+j] = normalise(sampled_image[i, :, Y.shape[1]//2, :]).unsqueeze(0)
-                                dim3cut[i*raw_length+j] = normalise(sampled_image[i, :, :, Y.shape[1]//2]).unsqueeze(0)
+                                dim2cut[i*raw_length+j] = normalise(sampled_image[i, :, Y.shape[2]//2, :]).unsqueeze(0)
+                                dim3cut[i*raw_length+j] = normalise(sampled_image[i, :, :, Y.shape[3]//2]).unsqueeze(0)
 
                     #--------------------------------------------------------------------------------------------
                     grid = torchvision.utils.make_grid(tensor=dim1cut,
