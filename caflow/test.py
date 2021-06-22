@@ -146,7 +146,7 @@ def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID
     
     with torch.no_grad():
         for j in range(1, model.num_val_samples+1):
-            sampled_image = model.sample(Y, shortcut=model.val_shortcut, T=temperature_list)
+            sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
             for i in range(B):
                 dim1cut[i*raw_length+j] = normalise(sampled_image[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
                 dim2cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
