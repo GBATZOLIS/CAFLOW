@@ -123,6 +123,68 @@ def plot_samples(writer, model, all_images, title, raw_length):
     writer.add_image(title, grid)
     writer.flush()
 
+def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, plot, num_selected_samples):
+    def normalise(A):
+        a = A.clone()
+        a -= torch.min(a)
+        a /= torch.max(a)
+        return a
+
+    B = Y.shape[0]
+    raw_length = 1 + model.num_val_samples + 1
+    dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]]))
+    dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]]))
+    dim3cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
+
+    for i in range(B):
+        dim1cut[i*raw_length] = normalise(Y[i, 0, Y.shape[2]//2, :, :]).unsqueeze(0)
+        dim1cut[(i+1)*raw_length-1] = normalise(I[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
+        dim2cut[i*raw_length] = normalise(Y[i, 0, :, Y.shape[3]//2, :]).unsqueeze(0)
+        dim2cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
+        dim3cut[i*raw_length] = normalise(Y[i, 0, :, :, Y.shape[4]//2]).unsqueeze(0)
+        dim3cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
+    
+    with torch.no_grad():
+        for j in range(1, model.num_val_samples+1):
+            sampled_image = model.sample(Y, shortcut=model.val_shortcut, T=sampling_T)
+            for i in range(B):
+                dim1cut[i*raw_length+j] = normalise(sampled_image[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
+                dim2cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
+                dim3cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
+                    
+    #--------------------------------------------------------------------------------------------
+    grid = torchvision.utils.make_grid(tensor=dim1cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=model.sample_padding,
+                        normalize=False,
+                        pad_value=model.sample_pad_value,
+                    )
+    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim1' % (model.current_epoch, temperature_list[0])
+    writer.add_image(str_title, grid)
+    writer.flush()
+
+    #--------------------------------------------------------------------------------------------
+    grid = torchvision.utils.make_grid(tensor=dim2cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=model.sample_padding,
+                        normalize=False,
+                        pad_value=model.sample_pad_value,
+                    )
+    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim2' % (model.current_epoch, temperature_list[0])
+    writer.add_image(str_title, grid)
+    writer.flush()
+    #--------------------------------------------------------------------------------------------
+    grid = torchvision.utils.make_grid(tensor=dim3cut,
+                        nrow = raw_length, #Number of images displayed in each row of the grid
+                        padding=model.sample_padding,
+                        normalize=False,
+                        pad_value=model.sample_pad_value,
+                    )
+    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (model.current_epoch, temperature_list[0])
+    writer.add_image(str_title, grid)
+    writer.flush()
+    #--------------------------------------------------------------------------------------------
+
 
 def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, plot, num_selected_samples):
     B = Y.shape[0]
@@ -194,8 +256,6 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
         title = 'valbatch_%d_epoch_%d_descending_cond_log_prob_selected_samples' % (batch_ID, model.current_epoch)+temp_string
         plot_samples(writer, model, selected_images_for_plotting, title, selected_raw_length)
 
-
-
     return selected_images
 
 def calculate_pixel_std(samples):
@@ -238,8 +298,10 @@ def main(hparams):
             for step, (x,y) in tqdm(enumerate(val_dataloader)):
 
                 x, y = x.to(device), y.to(device)
-                selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                draw_3D_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                #selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
 
+                '''
                 if hparams.num_selected_samples == 1:
                     selected_samples = torch.squeeze(selected_samples, dim=1)
                     for j in range(selected_samples.size(0)):
@@ -262,14 +324,14 @@ def main(hparams):
                     for j in range(selected_samples.size(0)):
                         for i in range(selected_samples.size(1)):
                             save_image(selected_samples[j][i], os.path.join(images_dir, 'img_%d_%d_%d.png'%(step, j, i)), normalize = True)
+                '''
 
-
-                
+    '''     
     print('Average PSNR: %.2f' % np.mean(average_psnr))
     print('Average RMSE: %.2f' % np.mean(average_rmse))
     print('Average LPIPS: %.2f' % np.mean(average_lpips))
     print('Average pixel std: %.3f' % np.mean(average_pixel_stds))
-
+    '''
     writer.close()
 
 if __name__ == '__main__':

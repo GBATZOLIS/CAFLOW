@@ -233,9 +233,7 @@ class CAFlow(pl.LightningModule):
                     grid = torchvision.utils.make_grid(tensor=dim1cut,
                         nrow = raw_length, #Number of images displayed in each row of the grid
                         padding=self.sample_padding,
-                        normalize=self.sample_normalize,
-                        range=self.sample_norm_range,
-                        scale_each=self.sample_scale_each,
+                        normalize=False,
                         pad_value=self.sample_pad_value,
                     )
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim1' % (self.current_epoch, sampling_T)
@@ -245,9 +243,7 @@ class CAFlow(pl.LightningModule):
                     grid = torchvision.utils.make_grid(tensor=dim2cut,
                         nrow = raw_length, #Number of images displayed in each row of the grid
                         padding=self.sample_padding,
-                        normalize=self.sample_normalize,
-                        range=self.sample_norm_range,
-                        scale_each=self.sample_scale_each,
+                        normalize=False,
                         pad_value=self.sample_pad_value,
                     )
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim2' % (self.current_epoch, sampling_T)
@@ -257,9 +253,7 @@ class CAFlow(pl.LightningModule):
                     grid = torchvision.utils.make_grid(tensor=dim3cut,
                         nrow = raw_length, #Number of images displayed in each row of the grid
                         padding=self.sample_padding,
-                        normalize=self.sample_normalize,
-                        range=self.sample_norm_range,
-                        scale_each=self.sample_scale_each,
+                        normalize=False,
                         pad_value=self.sample_pad_value,
                     )
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (self.current_epoch, sampling_T)
