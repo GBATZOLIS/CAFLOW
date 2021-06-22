@@ -144,13 +144,12 @@ def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID
         dim3cut[i*raw_length] = normalise(Y[i, 0, :, :, Y.shape[4]//2]).unsqueeze(0)
         dim3cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
     
-    with torch.no_grad():
-        for j in range(1, model.num_val_samples+1):
-            sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
-            for i in range(B):
-                dim1cut[i*raw_length+j] = normalise(sampled_image[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
-                dim2cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
-                dim3cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
+    for j in range(1, num_samples+1):
+        sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
+        for i in range(B):
+            dim1cut[i*raw_length+j] = normalise(sampled_image[i, 0, I.shape[2]//2, :, :]).unsqueeze(0)
+            dim2cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, I.shape[3]//2, :]).unsqueeze(0)
+            dim3cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
                     
     #--------------------------------------------------------------------------------------------
     grid = torchvision.utils.make_grid(tensor=dim1cut,
@@ -159,7 +158,7 @@ def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID
                         normalize=False,
                         pad_value=model.sample_pad_value,
                     )
-    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim1' % (model.current_epoch, temperature_list[0])
+    str_title = 'valbatch_%d_epoch_%d_T_%.2f_cut_dim1' % (batch_ID, model.current_epoch, temperature_list[0])
     writer.add_image(str_title, grid)
     writer.flush()
 
@@ -170,7 +169,7 @@ def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID
                         normalize=False,
                         pad_value=model.sample_pad_value,
                     )
-    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim2' % (model.current_epoch, temperature_list[0])
+    str_title = 'valbatch_%d_epoch_%d_T_%.2f_cut_dim2' % (batch_ID, model.current_epoch, temperature_list[0])
     writer.add_image(str_title, grid)
     writer.flush()
     #--------------------------------------------------------------------------------------------
@@ -180,7 +179,7 @@ def draw_3D_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID
                         normalize=False,
                         pad_value=model.sample_pad_value,
                     )
-    str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (model.current_epoch, temperature_list[0])
+    str_title = 'valbatch_%d_epoch_%d_T_%.2f_cut_dim3' % (batch_ID, model.current_epoch, temperature_list[0])
     writer.add_image(str_title, grid)
     writer.flush()
     #--------------------------------------------------------------------------------------------
