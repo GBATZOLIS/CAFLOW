@@ -51,6 +51,7 @@ class TemplateDataset(BaseDataset):
         if self.file_extension in ['.jpg', '.png']:
             transform_list = [transforms.ToTensor(), discretize]
         elif self.file_extension in ['.npy']:
+            self.channels = opts.data_channels
             transform_list = [torch.from_numpy, lambda x: x.type(torch.FloatTensor)]
         else:
             raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
@@ -69,6 +70,27 @@ class TemplateDataset(BaseDataset):
             elif self.file_extension in ['.npy']:
                 A = np.load(A_path)
                 B = np.load(B_path)
+
+                #dequantise 0 value
+                A[A<10**(-6)]=10**(-6)*np.random.rand()
+                B[B<10**(-6)]=10**(-6)*np.random.rand()
+
+                #reshape/slice appropriately
+                if self.channels == 1:
+                    A = np.expand_dims(A, axis=0)
+                    B = np.expand_dims(B, axis=0)
+                elif self.channels > 1 and self.channels < A.shape[-1]:
+                    starting_slicing_index = np.random.randint(0, A.shape[-1] - self.channels)
+                    A = A[:,:,starting_slicing_index:starting_slicing_index+self.channels]
+                    A = np.moveaxis(A, -1, 0)
+                    B = B[:,:,starting_slicing_index:starting_slicing_index+self.channels]
+                    B = np.moveaxis(B, -1, 0)
+                elif self.channels == A.shape[-1]:
+                    A = np.moveaxis(A, -1, 0)
+                    B = np.moveaxis(B, -1, 0)
+                else:
+                    raise Exception('Invalid number of channels.')
+
             else:
                 raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
             
@@ -85,6 +107,21 @@ class TemplateDataset(BaseDataset):
                 img = Image.open(path).convert('RGB')
             elif self.file_extension in ['.npy']:
                 img = np.load(path)
+
+                #dequantise 0 value
+                img[img<10**(-6)]=10**(-6)*np.random.rand()
+
+                #reshape/slice appropriately
+                if self.channels == 1:
+                    img = np.expand_dims(img, axis=0)
+                elif self.channels > 1 and self.channels < img.shape[-1]:
+                    starting_slicing_index = np.random.randint(0, img.shape[-1] - self.channels)
+                    img = img[:,:,starting_slicing_index:starting_slicing_index+self.channels]
+                    img = np.moveaxis(img, -1, 0)
+                elif self.channels == img.shape[-1]:
+                    img = np.moveaxis(img, -1, 0)
+                else:
+                    raise Exception('Invalid number of channels.')
 
             #transform the image/scan
             img_transformed = self.transform(img)

@@ -197,6 +197,21 @@ def inspect_data_values(paths_of_accepted_pairs):
 # and copies them to the correct directory for training, validation and testing
 
 def prepare_training_dataset(output_dir, read_paths, save_names, target_resolution=(96,96,96), split=[0.8, 0.1, 0.1]):
+    def calculate_zoom(target_shape, original_shape):
+        zoom = []
+        for x in range(len(original_shape)):
+            if target_resolution[x] == -1:
+                zoom.append(1)
+            else:
+                zoom.append(target_resolution[x]/mri_scan_shape[x])
+        return zoom
+
+    def save_mri_pet_paired_scans(phase, mri_scan, pet_scan, mri_scan_name, pet_scan_name):
+        mri_save_path = os.path.join(output_dir, 'mri2pet', phase, 'A', mri_scan_name)
+        pet_save_path = os.path.join(output_dir, 'mri2pet', phase, 'B', pet_scan_name)
+        np.save(mri_save_path, mri_scan)
+        np.save(pet_save_path, pet_scan)
+
     Path(os.path.join(output_dir, 'mri2pet', 'train', 'A')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(output_dir, 'mri2pet', 'train', 'B')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(output_dir, 'mri2pet', 'val', 'A')).mkdir(parents=True, exist_ok=True)
@@ -209,35 +224,21 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
     for i, index in tqdm(enumerate(permuted_indices)):
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
-        mri_scan[mri_scan<10**(-6)]=10**(-6)*np.random.rand()
-        pet_scan[pet_scan<10**(-6)]=10**(-6)*np.random.rand()
-
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
-
-        resized_mri_scan = zoom(mri_scan, zoom = [target_resolution[x]/mri_scan_shape[x] for x in range(len(mri_scan_shape))])
-        reshaped_mri_scan = np.expand_dims(resized_mri_scan, axis=0)
-
-        resized_pet_scan = zoom(pet_scan, zoom = [target_resolution[x]/pet_scan_shape[x] for x in range(len(pet_scan_shape))])
-        reshaped_pet_scan = np.expand_dims(resized_pet_scan, axis=0)
+        
+        resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape))
+        print('mri shape: ', resized_mri_scan.shape)
+        #reshaped_mri_scan = np.expand_dims(resized_mri_scan, axis=0)
+        resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
+        print('pet shape: ', resized_pet_scan.shape)
+        #reshaped_pet_scan = np.expand_dims(resized_pet_scan, axis=0)
 
         if i < int(split[0]*num_pairs):
-            #save under train
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'A', save_names[index][0])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'train', 'B', save_names[index][1])
-            np.save(mri_save_path, reshaped_mri_scan)
-            np.save(pet_save_path, reshaped_pet_scan)
+            save_mri_pet_paired_scans('train', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under train
         elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
-            # save under val
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'A', save_names[index][0])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'val', 'B', save_names[index][1])
-            np.save(mri_save_path, reshaped_mri_scan)
-            np.save(pet_save_path, reshaped_pet_scan)
+            save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
         else:
-            #save under test
-            mri_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'A', save_names[index][0])
-            pet_save_path = os.path.join(output_dir, 'mri2pet', 'test', 'B', save_names[index][1])
-            np.save(mri_save_path, reshaped_mri_scan)
-            np.save(pet_save_path, reshaped_pet_scan)
+            save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
 
 
 def main(args):
@@ -247,10 +248,15 @@ def main(args):
         info = inspect_data(args.input_dir, args.output_dir, args.dataset_type)
         save(info, 'dataset_info')
 
-    plot_num_pairs_vs_acquisition_threshold(args.max_time_threshold, info)
+    plot_num_pairs_vs_acquisition_threshold(args.inspect_time_threshold, info)
     
-    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(30, info)
-    prepare_training_dataset(args.output_dir, paths_of_accepted_pairs, renamed_paired_scans)
+    num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(args.time_threshold, info)
+    prepare_training_dataset(args.output_dir, paths_of_accepted_pairs, renamed_paired_scans, target_resolution=args.target_resolution, split=args.split)
+
+    print('============ dataset information ==============)
+    print('----- training examples: %d' % int(args.split[0]*num_pairs))
+    print('----- validation examples: %d' % int(args.split[1]*num_pairs))
+    print('----- testing examples: %d' % int(args.split[2]*num_pairs))
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -260,7 +266,12 @@ if __name__ == '__main__':
 
     #inspection settings
     parser.add_argument('--load-info', default=False, action='store_true', help='Load inspection info. If not loaded, it will be generated. Default=False')
-    parser.add_argument('--max-time-threshold', type=int, default=90, help='Maximum difference between MRI and PET')
+    parser.add_argument('--inspect-time-threshold', type=int, default=90, help='Maximum difference between MRI and PET')
+
+    #dataset creation settings
+    parser.add_argument('--target-resolution', nargs='+', type=int, default=[96,96,96])
+    parser.add_argument('--time-threshold', default=35, type=int, help='Maximum time difference between acquisition of MRI and PET scans.')
+    parser.add_argument('--split', nargs='+', type=float, default=[0.85, 0.1, 0.05], help='train-val-test split.')
 
     args = parser.parse_args()
     main(args)
