@@ -253,7 +253,7 @@ def main(args):
     num_pairs, paths_of_accepted_pairs, renamed_paired_scans = pairs_for_time_threshold(args.time_threshold, info)
     prepare_training_dataset(args.output_dir, paths_of_accepted_pairs, renamed_paired_scans, target_resolution=args.target_resolution, split=args.split)
 
-    print('============ dataset information ==============)
+    print('============ dataset information ==============')
     print('----- training examples: %d' % int(args.split[0]*num_pairs))
     print('----- validation examples: %d' % int(args.split[1]*num_pairs))
     print('----- testing examples: %d' % int(args.split[2]*num_pairs))
