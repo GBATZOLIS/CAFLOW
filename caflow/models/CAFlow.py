@@ -10,6 +10,7 @@ from caflow.models.modules.mri_to_pet.UnconditionalFlow import UnconditionalFlow
 from caflow.models.modules.mri_to_pet.SharedConditionalFlow import SharedConditionalFlow
 from caflow.models.modules.mri_to_pet.UnsharedConditionalFlow import UnsharedConditionalFlow
 from caflow.models.UFlow import UFlow
+from caflow.utils.processing import normalise
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
@@ -163,10 +164,10 @@ class CAFlow(pl.LightningModule):
         I_sample =  self.sample(Y, shortcut=self.val_shortcut)
         val_rec_loss = torch.mean(torch.abs(I-I_sample))
         self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
-        
+
         B = Y.shape[0]
         if batch_idx==0:
-            if self.dim == 2:
+            if self.dim == 2 and I.size(1) == 3:
                 raw_length = 1+self.num_val_samples+1
                 all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
                 
@@ -194,15 +195,27 @@ class CAFlow(pl.LightningModule):
                     str_title = 'val_samples_epoch_%d_T_%.2f' % (self.current_epoch, sampling_T)
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
             
+            elif self.dim == 2 and I.size(1) != 3: #sliced medical scans -> we treat the third dimension as the channel dimension (number of channels more than 3)
+                #Y, I shape: (batchsize, channels, x1, x2)
+                raw_length = 1+self.num_val_samples+1
+                all_images = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
+                for i in range(B):
+                    all_images[i*raw_length] = normalise(Y[i, self.channels//2, :, :]).unsqueeze(0)
+                    all_images[(i+1)*raw_length-1] = normalise(I[i, self.channels//2, :, :]).unsqueeze(0)
+                
+                for sampling_T in self.sampling_temperatures:
+                    # generate images
+                    for j in range(1, self.num_val_samples+1):
+                        sampled_image = self.sample(Y, shortcut=self.val_shortcut, T=sampling_T)
+                        for i in range(B):
+                            all_images[i*raw_length+j] = normalise(sampled_image[i, self.channels//2, :, :]).unsqueeze(0)
+                    
+                    grid = torchvision.utils.make_grid(tensor = all_images, nrow = raw_length, padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
+                    str_title = 'val_samples_epoch_%d_T_%.2f_middlecut_dim3' % (self.current_epoch, sampling_T)
+                    self.logger.experiment.add_image(str_title, grid, self.current_epoch)
+
             elif self.dim == 3:
-                def normalise(A):
-                    a = A.clone()
-                    a -= torch.min(a)
-                    a /= torch.max(a)
-                    return a
-
                 #Y, I shape: (batchsize, 1, x1, x2, x3) - (0, 1, 2, 3, 4)
-
                 #We are going to display slices of the 3D reconstructed PET image. 
                 #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
 
@@ -230,32 +243,17 @@ class CAFlow(pl.LightningModule):
                                 dim3cut[i*raw_length+j] = normalise(sampled_image[i, 0, :, :, I.shape[4]//2]).unsqueeze(0)
                     
                     #--------------------------------------------------------------------------------------------
-                    grid = torchvision.utils.make_grid(tensor=dim1cut,
-                        nrow = raw_length, #Number of images displayed in each row of the grid
-                        padding=self.sample_padding,
-                        normalize=False,
-                        pad_value=self.sample_pad_value,
-                    )
+                    grid = torchvision.utils.make_grid(tensor=dim1cut, nrow = raw_length, padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim1' % (self.current_epoch, sampling_T)
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
                     #--------------------------------------------------------------------------------------------
-                    grid = torchvision.utils.make_grid(tensor=dim2cut,
-                        nrow = raw_length, #Number of images displayed in each row of the grid
-                        padding=self.sample_padding,
-                        normalize=False,
-                        pad_value=self.sample_pad_value,
-                    )
+                    grid = torchvision.utils.make_grid(tensor=dim2cut, nrow = raw_length, padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim2' % (self.current_epoch, sampling_T)
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
                     #--------------------------------------------------------------------------------------------
-                    grid = torchvision.utils.make_grid(tensor=dim3cut,
-                        nrow = raw_length, #Number of images displayed in each row of the grid
-                        padding=self.sample_padding,
-                        normalize=False,
-                        pad_value=self.sample_pad_value,
-                    )
+                    grid = torchvision.utils.make_grid(tensor=dim3cut, nrow = raw_length, padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (self.current_epoch, sampling_T)
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
                     #--------------------------------------------------------------------------------------------

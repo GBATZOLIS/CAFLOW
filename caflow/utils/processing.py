@@ -43,3 +43,9 @@ def squeeze(x):
         x = x.permute(0, 1, 3, 5, 2, 4).contiguous()
         x = x.view(b, c * 2 * 2, h // 2, w // 2)
         return x
+
+def normalise(A):
+    a = A.clone()
+    a -= torch.min(a)
+    a /= torch.max(a)
+    return a
