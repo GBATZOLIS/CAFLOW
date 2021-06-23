@@ -120,7 +120,7 @@ def read_scan(path):
 def plot_num_pairs_vs_acquisition_threshold(max_time_threshold, info):
     plt.figure()
     plt.title('Number of pairs as a function of time between acquistion threshold')
-    time_thresholds = np.arange(1, args.max_time_threshold)
+    time_thresholds = np.arange(1, max_time_threshold)
     num_pairs = []
     for T in time_thresholds:
         number_of_pairs, _, _ = pairs_for_time_threshold(T, info)
