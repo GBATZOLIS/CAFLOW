@@ -3,6 +3,7 @@ import numpy as np
 
 class InvertibleScaling(nn.Module):
     def __init__(self, scaling_range):
+        super().__init__()
         self.range = scaling_range
     
     def forward(self, z, ldj, reverse=False):
