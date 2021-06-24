@@ -221,6 +221,9 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
 
     num_pairs = len(read_paths)
     permuted_indices = np.random.permutation(num_pairs)
+
+    mri_min, mri_max = float('inf'), float('-inf')
+    pet_min, pet_max = float('inf'), float('-inf')
     for i, index in tqdm(enumerate(permuted_indices)):
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
@@ -228,18 +231,34 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         
         resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape))
         print('mri shape: ', resized_mri_scan.shape)
-        #reshaped_mri_scan = np.expand_dims(resized_mri_scan, axis=0)
+
+        scan_min, scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
+        if scan_min < mri_min:
+            mri_min = scan_min
+        if scan_max > mri_max:
+            mri_max = scan_max
+
         resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
         print('pet shape: ', resized_pet_scan.shape)
-        #reshaped_pet_scan = np.expand_dims(resized_pet_scan, axis=0)
 
+        scan_min, scan_max = np.min(resized_pet_scan), np.max(resized_pet_scan)
+        if scan_min < pet_min:
+            pet_min = scan_min
+        if scan_max > pet_max:
+            pet_max = scan_max
+
+        #save the scan in the right folder.
+        '''
         if i < int(split[0]*num_pairs):
             save_mri_pet_paired_scans('train', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under train
         elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
             save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
         else:
             save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
+        '''
 
+    print('MRI RANGE: (%.8f, %.8f)' % (mri_min, mri_max))
+    print('PET RANGE: (%.8f, %.8f)' % (pet_min, pet_max))
 
 def main(args):
     if args.load_info:
