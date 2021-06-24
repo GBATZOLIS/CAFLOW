@@ -8,17 +8,17 @@ import numpy as np
 import hamiltorch
 
 class UFlow(pl.LightningModule):
-    def __init__(self, opts):
+    def __init__(self, dim, scales, channels, resolution, scale_depth, use_inv_scaling, scaling_range, use_dequantisation, quants, vardeq_depth, opts):
         super(UFlow, self).__init__()
         self.save_hyperparameters()
-        self.dim = opts.data_dim
-        self.scales = opts.model_scales
-        self.channels = opts.data_channels
+        self.dim = dim
+        self.scales = scales
+        self.channels = channels
 
-        if len(opts.resolution) > 1 :
-            self.resolution = opts.resolution
+        if len(resolution) > 1 :
+            self.resolution = resolution
         else: 
-            self.resolution = [opts.resolution[0] for _ in range(self.dim)]
+            self.resolution = [resolution[0] for _ in range(self.dim)]
 
         self.total_dims = self.channels*np.prod(self.resolution) #-->addition
 
@@ -30,9 +30,10 @@ class UFlow(pl.LightningModule):
         self.sample_scale_each = opts.sample_scale_each #bool
         self.sample_pad_value = opts.sample_pad_value #pad value
 
-        self.uflow = UnconditionalFlow(channels=self.channels, dim=self.dim, resolution=self.resolution, scales=opts.model_scales, 
-                                       scale_depth=opts.rflow_scale_depth, use_dequantisation=opts.use_dequantisation, \
-                                       quants=opts.r_quants, vardeq_depth=opts.vardeq_depth, coupling_type=opts.coupling_type,
+        self.uflow = UnconditionalFlow(channels=self.channels, dim=self.dim, resolution=self.resolution, scales=self.scales, 
+                                       scale_depth=scale_depth, use_inv_scaling=use_inv_scaling, scaling_range=scaling_range,\
+                                       use_dequantisation=use_dequantisation, \
+                                       quants=quants, vardeq_depth=vardeq_depth, coupling_type=opts.coupling_type,
                                        nn_settings=self.create_nn_settings(opts))
         
         #set the prior distribution for the latents

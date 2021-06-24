@@ -10,9 +10,9 @@ import torch.nn as nn
 import torch
 from caflow.models.modules.blocks.FlowBlock import FlowBlock                    
 from caflow.models.modules.blocks.Dequantisation import Dequantisation, VariationalDequantization
-
+from caflow.models.modules.blocks.InvertibleScaling import InvertibleScaling
 class UnconditionalFlow(nn.Module):
-    def __init__(self, channels, dim, resolution, scales, scale_depth, use_dequantisation, quants, vardeq_depth, coupling_type, nn_settings):
+    def __init__(self, channels, dim, resolution, scales, scale_depth, use_inv_scaling, scaling_range, use_dequantisation, quants, vardeq_depth, coupling_type, nn_settings):
         super(UnconditionalFlow, self).__init__()
         
         self.channels = channels
@@ -20,6 +20,7 @@ class UnconditionalFlow(nn.Module):
         self.resolution = resolution
         self.scales = scales
         self.use_dequantisation = use_dequantisation
+        self.use_inv_scaling = use_inv_scaling
 
         self.scale_blocks = nn.ModuleList()
 
@@ -30,6 +31,9 @@ class UnconditionalFlow(nn.Module):
                 self.dequantisation = VariationalDequantization(channels=channels, depth=vardeq_depth, dim=dim, \
                                                             resolution=self.calculate_resolution(dim, 0),\
                                                             quants=quants, coupling_type=coupling_type, nn_settings=nn_settings)
+
+        if self.use_inv_scaling:
+            self.invertible_scaling = InvertibleScaling(scaling_range)
 
         for scale in range(self.scales):
             scale_channels = self.calculate_scale_channels(dim, scale)
@@ -73,8 +77,12 @@ class UnconditionalFlow(nn.Module):
         h_pass = y
         z_enc = []
         
-        if self.use_dequantisation:
+        if self.use_dequantisation and not self.use_inv_scaling:
             h_pass, logdet = self.dequantisation(h_pass, logdet, False) #dequantisation
+        elif not self.use_dequantisation and self.use_inv_scaling:
+            h_pass, logdet = self.invertible_scaling(h_pass, logdet, False)
+        elif self.use_dequantisation and self.use_inv_scaling:
+            raise Exception('Dequantisation and Invertible scaling should not be used together. ')
 
         for i in range(0, self.scales):
             if i==self.scales-1:
@@ -103,9 +111,13 @@ class UnconditionalFlow(nn.Module):
                 concat_pass = torch.cat([h_split, h_pass], dim=1)
             h_pass, logdet = self.scale_blocks[self.scales-i-1](concat_pass, logdet, True)
         
-        if self.use_dequantisation:
+        if self.use_dequantisation and not self.use_inv_scaling:
             h_pass, logdet = self.dequantisation(h_pass, logdet, True) #quantisation
-        
+        elif not self.use_dequantisation and self.use_inv_scaling:
+            h_pass, logdet = self.invertible_scaling(h_pass, logdet, True)
+        elif self.use_dequantisation and self.use_inv_scaling:
+            raise Exception('Dequantisation and Invertible scaling should not be used together. ')
+
         return h_pass, logdet
 
 

@@ -72,8 +72,8 @@ class TemplateDataset(BaseDataset):
                 B = np.load(B_path)
 
                 #dequantise 0 value
-                A[A<10**(-6)]=10**(-6)*np.random.rand()
-                B[B<10**(-6)]=10**(-6)*np.random.rand()
+                #A[A<10**(-6)]=10**(-6)*np.random.rand()
+                #B[B<10**(-6)]=10**(-6)*np.random.rand()
 
                 #reshape/slice appropriately
                 if self.channels == 1:
@@ -109,7 +109,7 @@ class TemplateDataset(BaseDataset):
                 img = np.load(path)
 
                 #dequantise 0 value
-                img[img<10**(-6)]=10**(-6)*np.random.rand()
+                #img[img<10**(-6)]=10**(-6)*np.random.rand()
 
                 #reshape/slice appropriately
                 if self.channels == 1:
