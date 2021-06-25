@@ -252,7 +252,7 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape))
         print('mri shape: ', resized_mri_scan.shape)
 
-        scan_min, scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
+        scan_min, scan_max = np.min(mri_scan), np.max(mri_scan)
         if scan_min < mri_min:
             mri_min = scan_min
         if scan_max > mri_max:
@@ -261,7 +261,7 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
         print('pet shape: ', resized_pet_scan.shape)
 
-        scan_min, scan_max = np.min(resized_pet_scan), np.max(resized_pet_scan)
+        scan_min, scan_max = np.min(pet_scan), np.max(pet_scan)
         if scan_min < pet_min:
             pet_min = scan_min
         if scan_max > pet_max:
