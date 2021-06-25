@@ -238,46 +238,48 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
 
-        if i % 10 == 0 and i != 0:
-            concat_mri_scans, concat_pet_scans = np.concatenate(concat_mri_scans), np.concatenate(concat_pet_scans)
-            mri_unique, mri_count = np.unique(concat_mri_scans, return_counts=True)
-            pet_unique, pet_count = np.unique(concat_pet_scans, return_counts=True)
-            plot(mri_unique, mri_count, title='mri count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'mri', 'mri_count_vs_unique_values_%d.png' % i))
-            plot(pet_unique, pet_count, title='pet count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'pet', 'pet_count_vs_unique_values_%d.png' % i))
-            concat_mri_scans, concat_pet_scans = [], []
-        
-        concat_mri_scans.append(mri_scan)
-        concat_pet_scans.append(pet_scan)
+        resized_mri_scan = mri_scan
+        resized_pet_scan = pet_scan
 
-        resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape))
-        print('mri shape: ', resized_mri_scan.shape)
+        print('mri shape: ', mri_scan_shape)
+        print('pet shape: ', pet_scan_shape)
 
         scan_min, scan_max = np.min(mri_scan), np.max(mri_scan)
         if scan_min < mri_min:
             mri_min = scan_min
         if scan_max > mri_max:
             mri_max = scan_max
-
-        resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
-        print('pet shape: ', resized_pet_scan.shape)
-
+        
         scan_min, scan_max = np.min(pet_scan), np.max(pet_scan)
         if scan_min < pet_min:
             pet_min = scan_min
         if scan_max > pet_max:
             pet_max = scan_max
 
+        #if i % 10 == 0 and i != 0:
+        #    concat_mri_scans, concat_pet_scans = np.concatenate(concat_mri_scans), np.concatenate(concat_pet_scans)
+        #    mri_unique, mri_count = np.unique(concat_mri_scans, return_counts=True)
+        #    pet_unique, pet_count = np.unique(concat_pet_scans, return_counts=True)
+        #    plot(mri_unique, mri_count, title='mri count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'mri', 'mri_count_vs_unique_values_%d.png' % i))
+        #    plot(pet_unique, pet_count, title='pet count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'pet', 'pet_count_vs_unique_values_%d.png' % i))
+        #    concat_mri_scans, concat_pet_scans = [], []
+        #concat_mri_scans.append(mri_scan)
+        #concat_pet_scans.append(pet_scan)
+
+        #resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape)) #has a weird effect produces values out of range.
+        #print('mri shape: ', resized_mri_scan.shape)
+
+        #resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
+        #print('pet shape: ', resized_pet_scan.shape)
+
         #save the scan in the right folder.
-        '''
         if i < int(split[0]*num_pairs):
             save_mri_pet_paired_scans('train', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under train
         elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
             save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
         else:
             save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
-        '''
-
-
+        
     print('MRI RANGE: (%.8f, %.8f)' % (mri_min, mri_max))
     print('PET RANGE: (%.8f, %.8f)' % (pet_min, pet_max))
     

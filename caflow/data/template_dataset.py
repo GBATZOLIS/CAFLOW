@@ -53,6 +53,7 @@ class TemplateDataset(BaseDataset):
             transform_list = [transforms.ToTensor(), discretize]
         elif self.file_extension in ['.npy']:
             self.channels = opts.data_channels
+            self.resolution = opts.resolution
             transform_list = [torch.from_numpy, lambda x: x.type(torch.FloatTensor)]
         else:
             raise Exception('File extension %s is not supported yet. Please update the code.' % self.file_extension)
@@ -72,19 +73,30 @@ class TemplateDataset(BaseDataset):
                 A = np.load(A_path)
                 B = np.load(B_path)
 
-                #dequantise 0 value
-                #A[A<10**(-6)]=10**(-6)*np.random.rand()
-                #B[B<10**(-6)]=10**(-6)*np.random.rand()
-
                 #reshape/slice appropriately
                 if self.channels == 1:
-                    angle = [0, 90, 180, 270][np.random.randint(4)]
-                    axes_combo = [(0, 1), (1, 2), (0, 2)][np.random.randint(3)]
-                    if angle != 0:
-                        A = scipy.ndimage.rotate(A, angle=angle, axes=axes_combo)
-                        B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
+                    #------rotation-------
+                    #angle = [0, 90, 180, 270][np.random.randint(4)]
+                    #axes_combo = [(0, 1), (1, 2), (0, 2)][np.random.randint(3)]
+                    #if angle != 0:
+                    #    A = scipy.ndimage.rotate(A, angle=angle, axes=axes_combo)
+                    #    B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
+
+                    #slicing
+                    i0 = np.random.randint(0, A.shape[0]-self.resolution[0])
+                    i1 = np.random.randint(0, A.shape[1]-self.resolution[1])
+                    i2 = np.random.randint(0, A.shape[2]-self.resolution[2])
+                    A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+
+                    #dequantise 0 value
+                    A[A==0.]=10**(-6)*np.random.rand()
+                    B[B==0.]=10**(-6)*np.random.rand()
+                    
+                    #expand dimensions to acquire a pytorch-like form.
                     A = np.expand_dims(A, axis=0)
                     B = np.expand_dims(B, axis=0)
+
                 elif self.channels > 1 and self.channels < A.shape[-1]:
                     starting_slicing_index = np.random.randint(0, A.shape[-1] - self.channels)
                     A = A[:,:,starting_slicing_index:starting_slicing_index+self.channels]
