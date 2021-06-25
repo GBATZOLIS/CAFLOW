@@ -230,14 +230,24 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
 
     mri_min, mri_max = float('inf'), float('-inf')
     pet_min, pet_max = float('inf'), float('-inf')
+    Path(os.path.join(output_dir, 'mri2pet_histograms', 'mri')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, 'mri2pet_histograms', 'pet')).mkdir(parents=True, exist_ok=True)
     concat_mri_scans, concat_pet_scans = [], []
     for i, index in tqdm(enumerate(permuted_indices)):
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
-        if np.random.randint(0, 5) == 0:
-            concat_mri_scans.append(mri_scan)
-            concat_pet_scans.append(pet_scan)
+
+        if i % 10 == 0 and i != 0:
+            concat_mri_scans, concat_pet_scans = np.concatenate(concat_mri_scans), np.concatenate(concat_pet_scans)
+            mri_unique, mri_count = np.unique(concat_mri_scans, return_counts=True)
+            pet_unique, pet_count = np.unique(concat_pet_scans, return_counts=True)
+            plot(mri_unique, mri_count, title='mri count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'mri', 'mri_count_vs_unique_values_%d.png' % i))
+            plot(pet_unique, pet_count, title='pet count vs unique values', save_name=os.path.join(output_dir, 'mri2pet_histograms', 'pet', 'pet_count_vs_unique_values_%d.png' % i))
+            concat_mri_scans, concat_pet_scans = [], []
+        
+        concat_mri_scans.append(mri_scan)
+        concat_pet_scans.append(pet_scan)
 
         resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape))
         print('mri shape: ', resized_mri_scan.shape)
@@ -270,12 +280,8 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
 
     print('MRI RANGE: (%.8f, %.8f)' % (mri_min, mri_max))
     print('PET RANGE: (%.8f, %.8f)' % (pet_min, pet_max))
-    concat_mri_scans, concat_pet_scans = np.concatenate(concat_mri_scans), np.concatenate(concat_pet_scans)
-    mri_unique, mri_count = np.unique(concat_mri_scans, return_counts=True)
-    pet_unique, pet_count = np.unique(concat_pet_scans, return_counts=True)
-
-    plot(mri_unique, mri_count, title='mri count vs unique values', save_name='mri_count_vs_unique_values.png')
-    plot(pet_unique, pet_count, title='pet count vs unique values', save_name='pet_count_vs_unique_values.png')
+    
+    
 
 def main(args):
     if args.load_info:
