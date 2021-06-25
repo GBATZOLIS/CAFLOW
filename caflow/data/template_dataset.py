@@ -19,6 +19,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 import torch
 import numpy as np
+import scipy
 
 def discretize(sample):
     return (sample * 255).to(torch.float32)
@@ -77,6 +78,11 @@ class TemplateDataset(BaseDataset):
 
                 #reshape/slice appropriately
                 if self.channels == 1:
+                    angle = [0, 90, 180, 270][np.random.randint(4)]
+                    axes_combo = [(0, 1), (1, 2), (0, 2)][np.random.randint(3)]
+                    if angle != 0:
+                        A = scipy.ndimage.rotate(A, angle=angle, axes=axes_combo)
+                        B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
                     A = np.expand_dims(A, axis=0)
                     B = np.expand_dims(B, axis=0)
                 elif self.channels > 1 and self.channels < A.shape[-1]:
