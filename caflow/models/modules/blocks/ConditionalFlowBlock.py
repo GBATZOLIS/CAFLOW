@@ -13,6 +13,7 @@ from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSi
 import FrEIA.modules as Fm
 from caflow.utils.processing import squeeze, general_squeeze
 from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
+from caflow.models.modules.blocks.ChannelMixingLayer import ChannelMixingLayer
 
 class g_S(nn.Module):
     def __init__(self, channels, dim, resolution, depth, nn_settings, last_scale):
@@ -42,16 +43,17 @@ class g_S(nn.Module):
         dims_c = [conditional_dims, conditional_dims]
 
         #transition step
-        for _ in range(1):
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+        #for _ in range(1):
+        #    self.layers.append(Fm.ActNorm(dims_in=dims_in))
+        #    self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
         for _ in range(depth):
             #append activation layer
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
 
             #append permutation layer
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             
             #AFFINE INJECTOR
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \
@@ -122,16 +124,17 @@ class g_I(nn.Module):
         dims_c = dims_in
 
         #transition step
-        for _ in range(1):
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+        #for _ in range(1):
+        #    self.layers.append(Fm.ActNorm(dims_in=dims_in))
+        #    self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
         for _ in range(depth):
             #append activation layer
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
 
             #append permutation layer
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             
             #AFFINE INJECTOR
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \

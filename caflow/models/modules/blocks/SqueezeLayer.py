@@ -1,8 +1,9 @@
 from iunets.layers import InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D
+
 import torch.nn as nn
 
 class SqueezeLayer(nn.Module):
-    def __init__(self, channels, dim, stride=2, method='cayley', init='squeeze', learnable=False):
+    def __init__(self, channels, dim, stride=2, method='cayley', init='squeeze', learnable=True):
         super(SqueezeLayer, self).__init__()
         self.i_squeezelayer = [InvertibleDownsampling1D, InvertibleDownsampling2D, InvertibleDownsampling3D][dim-1](channels, stride, method, init, learnable)
     

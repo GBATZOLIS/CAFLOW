@@ -19,7 +19,7 @@ from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 import FrEIA.modules as Fm
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
 from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
-
+from caflow.models.modules.blocks.ChannelMixingLayer import ChannelMixingLayer
 
 class FlowBlock(nn.Module):
     def __init__(self, channels, dim, resolution, depth, coupling_type, nn_settings):
@@ -43,13 +43,14 @@ class FlowBlock(nn.Module):
         dims_in = [(transformed_channels,)+transformed_resolution]
 
         #transition step
-        for _ in range(2):
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+        #for _ in range(2):
+        #    self.layers.append(Fm.ActNorm(dims_in=dims_in))
+        #    self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
         for _ in range(depth):
-            self.layers.append(Fm.ActNorm(dims_in=dims_in))
-            self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
+            self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, \
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 nn_settings=nn_settings))
