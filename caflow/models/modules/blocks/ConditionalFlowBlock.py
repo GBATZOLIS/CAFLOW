@@ -49,7 +49,7 @@ class g_S(nn.Module):
 
         for _ in range(depth):
             #append activation layer
-            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
 
             #append permutation layer
             #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
@@ -130,7 +130,7 @@ class g_I(nn.Module):
 
         for _ in range(depth):
             #append activation layer
-            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
 
             #append permutation layer
             #self.layers.append(InvertibleConv1x1(dims_in=dims_in))

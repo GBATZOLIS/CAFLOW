@@ -8,7 +8,7 @@ Created on Sat Feb  6 18:09:39 2021
 
 
 import torch.nn as nn
-from torch.nn import Conv1d, Conv2d, Conv3d
+from torch.nn import Conv1d, Conv2d, Conv3d, BatchNorm1d, BatchNorm2d, BatchNorm3d
 
 class SimpleConvNet(nn.Module):
     def __init__(self, c_in, c_out, c_hidden_factor, dim):
@@ -22,16 +22,19 @@ class SimpleConvNet(nn.Module):
         """
         super(SimpleConvNet, self).__init__()
         
-        conv = [Conv1d, Conv2d, Conv3d][dim-1]
+        conv = [Conv1d, Conv2d, Conv3d][dim - 1]
+        normalisation = [BatchNorm1d, BatchNorm2d, BatchNorm3d][dim - 1]
+
         #c_hidden = int(c_hidden_factor * c_in)
         c_hidden = c_hidden_factor
         
         layers = nn.ModuleList()
-        layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
-        for layer_index in range(1):
-            layers += [conv(c_hidden, c_hidden, kernel_size=1),
-                       nn.ReLU(inplace=False)]
-        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
+        
+        layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), normalisation(c_hidden), nn.ReLU(inplace=False)]
+        for _ in range(1):
+            layers += [conv(c_hidden, c_hidden, kernel_size=1), normalisation(c_hidden), nn.ReLU(inplace=False)]
+        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1), normalisation(c_out)]
+
         self.nn = nn.Sequential(*layers)
         
         #start the coupling layer as identity -> t=0, exp(s)=1

@@ -48,7 +48,7 @@ class FlowBlock(nn.Module):
         #    self.layers.append(InvertibleConv1x1(dims_in=dims_in))
 
         for _ in range(depth):
-            #self.layers.append(Fm.ActNorm(dims_in=dims_in))
+            self.layers.append(Fm.ActNorm(dims_in=dims_in))
             #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, \
