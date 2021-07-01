@@ -230,6 +230,9 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
 
     mri_min, mri_max = float('inf'), float('-inf')
     pet_min, pet_max = float('inf'), float('-inf')
+    r_mri_min, r_mri_max = float('inf'), float('-inf')
+    r_pet_min, r_pet_max = float('inf'), float('-inf')
+
     Path(os.path.join(output_dir, 'mri2pet_histograms', 'mri')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(output_dir, 'mri2pet_histograms', 'pet')).mkdir(parents=True, exist_ok=True)
     concat_mri_scans, concat_pet_scans = [], []
@@ -237,9 +240,6 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
-
-        resized_mri_scan = mri_scan
-        resized_pet_scan = pet_scan
 
         print('mri shape: ', mri_scan_shape)
         print('pet shape: ', pet_scan_shape)
@@ -266,11 +266,23 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         #concat_mri_scans.append(mri_scan)
         #concat_pet_scans.append(pet_scan)
 
-        #resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape)) #has a weird effect produces values out of range.
-        #print('mri shape: ', resized_mri_scan.shape)
+        resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape), order=0) #has a weird effect produces values out of range->use order=0
+        print('mri shape: ', resized_mri_scan.shape)
 
-        #resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape))
-        #print('pet shape: ', resized_pet_scan.shape)
+        resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape), order=0)
+        print('pet shape: ', resized_pet_scan.shape)
+
+        r_scan_min, r_scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
+        if r_scan_min < r_mri_min:
+            r_mri_min = r_scan_min
+        if r_scan_max > r_mri_max:
+            r_mri_max = r_scan_max
+        
+        r_scan_min, r_scan_max = np.min(resized_pet_scan), np.max(resized_pet_scan)
+        if r_scan_min < r_pet_min:
+            r_pet_min = r_scan_min
+        if r_scan_max > r_pet_max:
+            r_pet_max = r_scan_max
 
         #save the scan in the right folder.
         if i < int(split[0]*num_pairs):
@@ -279,9 +291,14 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
             save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
         else:
             save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
-        
+    
+    print('====== ORIGINAL RANGE ========')
     print('MRI RANGE: (%.8f, %.8f)' % (mri_min, mri_max))
     print('PET RANGE: (%.8f, %.8f)' % (pet_min, pet_max))
+
+    print('======= RESIZED RANGE ========')
+    print('MRI RANGE: (%.8f, %.8f)' % (r_mri_min, r_mri_max))
+    print('PET RANGE: (%.8f, %.8f)' % (r_pet_min, r_pet_max))
     
     
 
