@@ -83,11 +83,11 @@ class TemplateDataset(BaseDataset):
                     #    B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
 
                     #slicing
-                    i0 = np.random.randint(0, A.shape[0]-self.resolution[0])
-                    i1 = np.random.randint(0, A.shape[1]-self.resolution[1])
-                    i2 = np.random.randint(0, A.shape[2]-self.resolution[2])
-                    A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
-                    B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    #i0 = np.random.randint(0, A.shape[0]-self.resolution[0])
+                    #i1 = np.random.randint(0, A.shape[1]-self.resolution[1])
+                    #i2 = np.random.randint(0, A.shape[2]-self.resolution[2])
+                    #A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    #B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
 
                     #dequantise 0 value
                     A[A==0.]=10**(-6)*np.random.rand()
@@ -103,6 +103,7 @@ class TemplateDataset(BaseDataset):
                     A = np.moveaxis(A, -1, 0)
                     B = B[:,:,starting_slicing_index:starting_slicing_index+self.channels]
                     B = np.moveaxis(B, -1, 0)
+
                 elif self.channels == A.shape[-1]:
                     A = np.moveaxis(A, -1, 0)
                     B = np.moveaxis(B, -1, 0)
