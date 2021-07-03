@@ -157,7 +157,7 @@ class CAFlow(pl.LightningModule):
             def mean_abs(X:list, Y:list):
                 result = 0.
                 for x, y in zip(X,Y):
-                    result += torch.mean(torch.abs(x,y))
+                    result += torch.mean(torch.abs(x - y))
                 return result
 
             D, Z_cond, L = encodings[0], encodings[1], encodings[2]
