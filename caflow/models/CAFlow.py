@@ -161,8 +161,8 @@ class CAFlow(pl.LightningModule):
                 return result
 
             D, Z_cond, L = encodings[0], encodings[1], encodings[2]
-            Y_dash, _ = self.model['rflow'](y=D, reverse=True)
-            I_dash, _ = self.model['tflow'](y=L, reverse=True)
+            Y_dash, _ = self.model['rflow'](z=D, reverse=True)
+            I_dash, _ = self.model['tflow'](z=L, reverse=True)
             if self.shared:
                 L_dash, _ = self.model['SharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True, shortcut=self.train_shortcut)
             else:
