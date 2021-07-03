@@ -133,9 +133,9 @@ class CAFlow(pl.LightningModule):
         if scaled:
             #scaled_logjoint = logjoint*np.log2(np.exp(1))/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
             scaled_logjoint = logjoint/(np.prod(Y.shape[1:])*np.prod(I.shape[1:]))
-            return scaled_logjoint, [D, Z_cond]
+            return scaled_logjoint, [D, Z_cond, L]
         else:
-            return logjoint, [D, Z_cond]
+            return logjoint, [D, Z_cond, L]
     
     def training_step(self, batch, batch_idx):
         Y, I = batch
@@ -154,6 +154,24 @@ class CAFlow(pl.LightningModule):
             self.log('train_rec_loss', train_rec_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
             loss = neg_avg_scaled_logjoint + self.lambda_rec * train_rec_loss
         else:
+            def mean_abs(X:list, Y:list):
+                result = 0.
+                for x, y in zip(X,Y):
+                    result += torch.mean(torch.abs(x,y))
+                return result
+
+            D, Z_cond, L = encodings[0], encodings[1], encodings[2]
+            Y_dash, _ = self.model['rflow'](y=D, reverse=True)
+            I_dash, _ = self.model['tflow'](y=L, reverse=True)
+            if self.shared:
+                L_dash, _ = self.model['SharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True, shortcut=self.train_shortcut)
+            else:
+                L_dash, _ = self.model['UnsharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True)
+            
+            self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
             loss = neg_avg_scaled_logjoint
         
         #logging
