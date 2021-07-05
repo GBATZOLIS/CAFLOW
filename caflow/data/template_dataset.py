@@ -60,6 +60,7 @@ class TemplateDataset(BaseDataset):
 
         self.transform = transforms.Compose(transform_list)
 
+
     def __getitem__(self, index):
         if self.domain is None:
             A_path = self.image_paths['A'][index]
@@ -75,19 +76,26 @@ class TemplateDataset(BaseDataset):
 
                 #reshape/slice appropriately
                 if self.channels == 1:
+                    #slicing
+                    def get_starting_index(A, resolution, axis):
+                        if A.shape[axis] == self.resolution[axis]:
+                            starting_index = 0
+                        elif A.shape[axis] > self.resolution[axis]:
+                            starting_index = np.random.randint(0, A.shape[axis]-self.resolution[axis])
+                        else:
+                            raise Exception('requested resolution exceeds data resolution in axis %d' % axis)
+                        return starting_index
+
+                    i0, i1, i2 = get_starting_index(A, self.resolution, 0), get_starting_index(A, self.resolution, 1), get_starting_index(A, self.resolution, 2)
+                    A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+
                     #------rotation-------
                     #angle = [0, 90, 180, 270][np.random.randint(4)]
                     #axes_combo = [(0, 1), (1, 2), (0, 2)][np.random.randint(3)]
                     #if angle != 0:
                     #    A = scipy.ndimage.rotate(A, angle=angle, axes=axes_combo)
                     #    B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
-
-                    #slicing
-                    #i0 = np.random.randint(0, A.shape[0]-self.resolution[0])
-                    #i1 = np.random.randint(0, A.shape[1]-self.resolution[1])
-                    #i2 = np.random.randint(0, A.shape[2]-self.resolution[2])
-                    #A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
-                    #B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
 
                     #dequantise 0 value
                     A[A==0.]=10**(-6)*np.random.rand()
