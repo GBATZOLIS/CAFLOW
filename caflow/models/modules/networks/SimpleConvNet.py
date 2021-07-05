@@ -23,7 +23,7 @@ class SimpleConvNet(nn.Module):
         super(SimpleConvNet, self).__init__()
         
         conv = [Conv1d, Conv2d, Conv3d][dim - 1]
-        
+
         #c_hidden = int(c_hidden_factor * c_in)
         c_hidden = c_hidden_factor
         
@@ -32,7 +32,7 @@ class SimpleConvNet(nn.Module):
         layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=False), nn.ReLU(inplace=False)]
         for _ in range(1):
             layers += [conv(c_hidden, c_hidden, kernel_size=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=False), nn.ReLU(inplace=False)]
-        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1), LayerNorm(normalized_shape=[c_out]+list(resolution), elementwise_affine=False)]
+        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
 
         self.nn = nn.Sequential(*layers)
         
