@@ -29,9 +29,9 @@ class SimpleConvNet(nn.Module):
         
         layers = nn.ModuleList()
         
-        layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=False), nn.ReLU(inplace=False)]
+        layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=True), nn.ReLU(inplace=False)]
         for _ in range(1):
-            layers += [conv(c_hidden, c_hidden, kernel_size=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=False), nn.ReLU(inplace=False)]
+            layers += [conv(c_hidden, c_hidden, kernel_size=1), LayerNorm(normalized_shape=[c_hidden]+list(resolution), elementwise_affine=True), nn.ReLU(inplace=False)]
         layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
 
         self.nn = nn.Sequential(*layers)
