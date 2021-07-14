@@ -169,6 +169,7 @@ class CAFlow(pl.LightningModule):
                 else:
                     L_dash, _ = self.model['UnsharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True)
                 
+                print(torch.mean(torch.abs(Y-Y_dash)))
                 self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
