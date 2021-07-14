@@ -7,6 +7,7 @@ Created on Sun Jan 24 17:24:21 2021
 """
 
 import torch.nn as nn
+import torch
 from caflow.models.modules.blocks.ActNorm import ActNorm
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.blocks import coupling_layer
@@ -53,6 +54,7 @@ class FlowBlock(nn.Module):
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, \
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
     
     def forward(self, h, logdet, reverse=False):

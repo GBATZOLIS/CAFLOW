@@ -7,6 +7,7 @@ Created on Wed Jan 27 01:31:06 2021
 """
 
 import torch.nn as nn
+import torch
 from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
 from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, ConditionalAffineTransform
@@ -59,12 +60,14 @@ class g_S(nn.Module):
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \
                                                 dims_c=dims_c, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
-                                                      subnet_constructor=parse_nn_by_name(nn_settings['nn_type']), 
+                                                      subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                      clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                       nn_settings=nn_settings))
     
     def forward(self, h, L, D, logdet, reverse=False):
@@ -140,12 +143,14 @@ class g_I(nn.Module):
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \
                                                 dims_c=dims_c, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
             self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']), 
+                                                      clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                       nn_settings=nn_settings))
     
     def forward(self, h, D, logdet, reverse=False):
