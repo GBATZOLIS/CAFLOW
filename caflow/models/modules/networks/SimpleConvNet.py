@@ -32,7 +32,7 @@ class SimpleConvNet(nn.Module):
         layers += [spectral_norm(conv(c_in, c_hidden, kernel_size=3, padding=1)), nn.ReLU(inplace=False)]
         for _ in range(1):
             layers += [spectral_norm(conv(c_hidden, c_hidden, kernel_size=1)), nn.ReLU(inplace=False)]
-        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
+        layers += [spectral_norm(conv(c_hidden, c_out, kernel_size=3, padding=1))]
 
         self.nn = nn.Sequential(*layers)
         
