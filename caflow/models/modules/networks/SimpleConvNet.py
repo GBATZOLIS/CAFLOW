@@ -37,8 +37,8 @@ class SimpleConvNet(nn.Module):
         self.nn = nn.Sequential(*layers)
         
         #start the coupling layer as identity -> t=0, exp(s)=1
-        #self.nn[-1].weight.data.zero_()
-        #self.nn[-1].bias.data.zero_()
+        self.nn[-1].weight.data.zero_()
+        self.nn[-1].bias.data.zero_()
 
     def forward(self, x):
         return self.nn(x)
