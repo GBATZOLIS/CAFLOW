@@ -29,16 +29,16 @@ class SimpleConvNet(nn.Module):
         
         layers = nn.ModuleList()
         
-        layers += [spectral_norm(conv(c_in, c_hidden, kernel_size=3, padding=1)), nn.ReLU(inplace=False)]
+        layers += [conv(c_in, c_hidden, kernel_size=3, padding=1), nn.ReLU(inplace=False)]
         for _ in range(1):
-            layers += [spectral_norm(conv(c_hidden, c_hidden, kernel_size=1)), nn.ReLU(inplace=False)]
-        layers += [spectral_norm(conv(c_hidden, c_out, kernel_size=3, padding=1))]
+            layers += [conv(c_hidden, c_hidden, kernel_size=1), nn.ReLU(inplace=False)]
+        layers += [conv(c_hidden, c_out, kernel_size=3, padding=1)]
 
         self.nn = nn.Sequential(*layers)
         
         #start the coupling layer as identity -> t=0, exp(s)=1
-        #self.nn[-1].weight.data.zero_()
-        #self.nn[-1].bias.data.zero_()
+        self.nn[-1].weight.data.zero_()
+        self.nn[-1].bias.data.zero_()
 
     def forward(self, x):
         return self.nn(x)
