@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch
 from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.blocks.permutations import InvertibleConv1x1
-from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, ConditionalAffineTransform
+from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, ConditionalAffineTransform, AdditiveCouplingOneSided, ConditionalAdditiveTransform
 import FrEIA.modules as Fm
 from caflow.utils.processing import squeeze, general_squeeze
 from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
@@ -57,14 +57,14 @@ class g_S(nn.Module):
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             
             #AFFINE INJECTOR
-            self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \
+            self.layers.append(ConditionalAdditiveTransform(dims_in=dims_in, \
                                                 dims_c=dims_c, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
-            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
+            self.layers.append(AdditiveCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                       clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
@@ -140,14 +140,14 @@ class g_I(nn.Module):
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
             
             #AFFINE INJECTOR
-            self.layers.append(ConditionalAffineTransform(dims_in=dims_in, \
+            self.layers.append(ConditionalAdditiveTransform(dims_in=dims_in, \
                                                 dims_c=dims_c, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
-            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
+            self.layers.append(AdditiveCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']), 
                                                       clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),

@@ -18,7 +18,7 @@ from caflow.models.modules.networks.nnflowpp import nnflowpp
 from caflow.models.modules.networks.parse_nn_by_name import parse_nn_by_name
 from caflow.models.modules.networks.CondSimpleConvNet import CondSimpleConvNet
 import FrEIA.modules as Fm
-from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided
+from caflow.models.modules.blocks.AffineCouplingLayer import AffineCouplingOneSided, AdditiveCouplingOneSided
 from caflow.models.modules.blocks.SqueezeLayer import SqueezeLayer
 from caflow.models.modules.blocks.ChannelMixingLayer import ChannelMixingLayer
 
@@ -52,7 +52,7 @@ class FlowBlock(nn.Module):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
-            self.layers.append(coupling_layer(coupling_type)(dims_in=dims_in, \
+            self.layers.append(AdditiveCouplingOneSided(dims_in=dims_in, \
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
