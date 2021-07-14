@@ -160,17 +160,18 @@ class CAFlow(pl.LightningModule):
                     result += torch.mean(torch.abs(x - y))
                 return result
 
-            D, Z_cond, L = encodings[0], encodings[1], encodings[2]
-            Y_dash, _ = self.model['rflow'](z=D, reverse=True)
-            I_dash, _ = self.model['tflow'](z=L, reverse=True)
-            if self.shared:
-                L_dash, _ = self.model['SharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True, shortcut=self.train_shortcut)
-            else:
-                L_dash, _ = self.model['UnsharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True)
-            
-            self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+            with torch.no_grad():
+                D, Z_cond, L = encodings[0], encodings[1], encodings[2]
+                Y_dash, _ = self.model['rflow'](z=D, reverse=True)
+                I_dash, _ = self.model['tflow'](z=L, reverse=True)
+                if self.shared:
+                    L_dash, _ = self.model['SharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True, shortcut=self.train_shortcut)
+                else:
+                    L_dash, _ = self.model['UnsharedConditionalFlow'](L=[], z=Z_cond, D=D, reverse=True)
+                
+                self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+                self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
+                self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
             loss = neg_avg_scaled_logjoint
         
