@@ -81,7 +81,7 @@ class g_S(nn.Module):
     def encode(self, h, L, D, logdet):
         h = (h,)
         for layer in self.layers:
-            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
+            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform, AdditiveCouplingOneSided, ConditionalAdditiveTransform)):
                 h, jac = layer(h, c=[general_squeeze(L), general_squeeze(D)], rev=False)
             else:
                 h, jac = layer(h, rev=False)
@@ -93,7 +93,7 @@ class g_S(nn.Module):
     def decode(self, h, L, D, logdet):
         h = (h,)
         for layer in reversed(self.layers):
-            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
+            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform, AdditiveCouplingOneSided, ConditionalAdditiveTransform)):
                 h, jac = layer(h, c=[general_squeeze(L), general_squeeze(D)], rev=True)
             else:
                 h, jac = layer(h, rev=True)
@@ -164,7 +164,7 @@ class g_I(nn.Module):
     def encode(self, h, D, logdet):
         h = (h,)
         for layer in self.layers:
-            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
+            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform, AdditiveCouplingOneSided, ConditionalAdditiveTransform)):
                 h, jac = layer(h, c=[general_squeeze(D)], rev=False)
             else:
                 h, jac = layer(h, rev=False)
@@ -176,7 +176,7 @@ class g_I(nn.Module):
     def decode(self, h, D, logdet):
         h = (h,)
         for layer in reversed(self.layers):
-            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform)):
+            if isinstance(layer, (AffineCouplingOneSided, ConditionalAffineTransform, AdditiveCouplingOneSided, ConditionalAdditiveTransform)):
                 h, jac = layer(h, c=[general_squeeze(D)], rev=True)
             else:
                 h, jac = layer(h, rev=True)
