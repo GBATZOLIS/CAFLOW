@@ -175,14 +175,14 @@ if __name__ == '__main__':
     
     #The following arguments are used for conditional image sampling in the validation process
     parser.add_argument('--num-val-u-samples', type=int, default=64, help='num of samples to generate in validation - unconditional setting')
-    parser.add_argument('--num-val-samples', type=int, default=6, help='num of samples to generate in validation - conditional setting')
+    parser.add_argument('--num-val-samples', type=int, default=1, help='num of samples to generate in validation - conditional setting')
     parser.add_argument('--sample-padding', type=int, default=2, help='Amount of padding' )
     parser.add_argument('--sample-normalize', default=True, action='store_false', help='If True, shift the image to the range (0, 1), by the min and max values specified by range. Default: False' )
     parser.add_argument('--sample-norm-range', type=tuple, default=(0, 255), help='Tuple (min, max) where min and max are numbers, then these numbers are used to normalize the image. \
                                                                         By default, min and max are computed from the tensor.')
     parser.add_argument('--sample-scale-each', default=False, action='store_true', help='If True, scale each image in the batch of images separately rather than the (min, max) over all images. Default: False.' )
     parser.add_argument('--sample-pad-value', type=int, default=0)
-    parser.add_argument('--sampling_temperatures', type=list, default=[0.9, 0.75, 0.5], help='List of sampling temperatures in the validation process.')
+    parser.add_argument('--sampling_temperatures', type=list, default=[0.9], help='List of sampling temperatures in the validation process.')
 
     #Loss function constant factors:
     parser.add_argument('--lamda', default=1e-3, type=float, help='Constant factor multiplied by the loss value of the rflow regulariser. See Dual-Glow for more details.')

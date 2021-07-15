@@ -195,7 +195,7 @@ class CAFlow(pl.LightningModule):
         self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
 
         B = Y.shape[0]
-        if batch_idx==0:
+        if batch_idx in np.arange(0,10):
             if self.dim == 2 and I.size(1) == 3:
                 raw_length = 1+self.num_val_samples+1
                 all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
@@ -247,7 +247,47 @@ class CAFlow(pl.LightningModule):
                 #Y, I shape: (batchsize, 1, x1, x2, x3) - (0, 1, 2, 3, 4)
                 #We are going to display slices of the 3D reconstructed PET image. 
                 #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
+                
+                def generate_paired_video(Y, I, num_samples, dim, epoch, batch):
+                    #dim: the sliced dimension (choices: 1,2,3)
+                    B = Y.size(0)
+                    raw_length = 1+num_samples+1
+                    frames = Y.size(dim+1)
+                    video_grid = []
+                    for frame in range(frames):
+                        if dim==1:
+                            dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]]))
+                        elif dim==2:
+                            dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]]))
+                        elif dim==3:
+                            dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]]))
 
+                        for i in range(B):
+                            if dim==1:
+                                dim_cut[i*raw_length] = normalise(Y[i, 0, frame, :, :]).unsqueeze(0)
+                                dim_cut[(i+1)*raw_length-1] = normalise(I[i, 0, frame, :, :]).unsqueeze(0)
+                            elif dim==2:
+                                dim_cut[i*raw_length] = normalise(Y[i, 0, :, frame, :]).unsqueeze(0)
+                                dim_cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, frame, :]).unsqueeze(0)
+                            elif dim==3:
+                                dim_cut[i*raw_length] = normalise(Y[i, 0, :, :, frame]).unsqueeze(0)
+                                dim_cut[(i+1)*raw_length-1] = normalise(I[i, 0, :, :, frame]).unsqueeze(0)
+
+                        grid_cut = torchvision.utils.make_grid(tensor=dim_cut, nrow=raw_length, 
+                                                    padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
+                        video_grid.append(grid_cut)
+
+                    video_grid = torch.stack(video_grid)
+
+                    str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
+                    self.logger.experiment.add_video(str_title, video_grid)
+
+                generate_paired_video(Y, I, 0, 1, self.current_epoch, batch_idx)
+                generate_paired_video(Y, I, 0, 2, self.current_epoch, batch_idx)
+                generate_paired_video(Y, I, 0, 3, self.current_epoch, batch_idx)
+
+
+                '''
                 raw_length = 1 + self.num_val_samples + 1
                 dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]]))
                 dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]]))
@@ -286,7 +326,7 @@ class CAFlow(pl.LightningModule):
                     str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (self.current_epoch, sampling_T)
                     self.logger.experiment.add_image(str_title, grid, self.current_epoch)
                     #--------------------------------------------------------------------------------------------
-
+                '''
 
     def configure_optimizers(self,):
         class scheduler_lambda_function:
