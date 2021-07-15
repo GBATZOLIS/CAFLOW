@@ -281,8 +281,8 @@ class CAFlow(pl.LightningModule):
                     video_grid = torch.stack(video_grid, dim=0)
                     print(video_grid.size())
 
-                    str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
-                    self.logger.experiment.add_video(str_title, video_grid)
+                    #str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
+                    #self.logger.experiment.add_video(str_title, video_grid, self.current_epoch)
 
                 generate_paired_video(Y, I, 0, 1, self.current_epoch, batch_idx)
                 generate_paired_video(Y, I, 0, 2, self.current_epoch, batch_idx)
