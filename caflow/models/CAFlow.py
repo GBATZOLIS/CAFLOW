@@ -275,14 +275,14 @@ class CAFlow(pl.LightningModule):
 
                         grid_cut = torchvision.utils.make_grid(tensor=dim_cut, nrow=raw_length, 
                                                     padding=self.sample_padding, normalize=False, pad_value=self.sample_pad_value)
-                        print(grid_cut.size())
+                        #print(grid_cut.size())
                         video_grid.append(grid_cut)
 
-                    video_grid = torch.stack(video_grid, dim=0)
+                    video_grid = torch.stack(video_grid, dim=0).unsqueeze(0)
                     print(video_grid.size())
 
-                    #str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
-                    #self.logger.experiment.add_video(str_title, video_grid, self.current_epoch)
+                    str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
+                    self.logger.experiment.add_video(str_title, video_grid, self.current_epoch)
 
                 generate_paired_video(Y, I, 0, 1, self.current_epoch, batch_idx)
                 generate_paired_video(Y, I, 0, 2, self.current_epoch, batch_idx)
