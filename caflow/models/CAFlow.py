@@ -195,7 +195,7 @@ class CAFlow(pl.LightningModule):
         self.log('val_rec_loss', val_rec_loss, on_step=True, on_epoch=True, sync_dist=True)
 
         B = Y.shape[0]
-        if batch_idx in np.arange(0,10):
+        if batch_idx in np.arange(0,10) and self.current_epoch==0:
             if self.dim == 2 and I.size(1) == 3:
                 raw_length = 1+self.num_val_samples+1
                 all_images = torch.zeros(tuple([B*raw_length,]) + I.shape[1:])
