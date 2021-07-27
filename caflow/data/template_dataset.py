@@ -73,7 +73,7 @@ class TemplateDataset(BaseDataset):
             elif self.file_extension in ['.npy']:
                 A = np.load(A_path)
                 B = np.load(B_path)
-                print(A.shape)
+                
                 #reshape/slice appropriately
                 if self.channels == 1:
                     #slicing
