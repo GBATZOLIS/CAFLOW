@@ -52,10 +52,17 @@ class FlowBlock(nn.Module):
             self.layers.append(Fm.ActNorm(dims_in=dims_in))
             #self.layers.append(InvertibleConv1x1(dims_in=dims_in))
             self.layers.append(ChannelMixingLayer(transformed_channels, dim))
-            self.layers.append(AdditiveCouplingOneSided(dims_in=dims_in, \
+            '''
+            self.layers.append(AdditiveCouplingOneSided(dims_in=dims_in, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
                                                 clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
+            '''
+            self.layers.append(AffineCouplingOneSided(dims_in=dims_in, \
+                                                subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
+                                                nn_settings=nn_settings))
+
     
     def forward(self, h, logdet, reverse=False):
         if reverse:
