@@ -153,8 +153,8 @@ if __name__ == '__main__':
     parser.add_argument('--s-cond-u-scale-depth', type=int, default=16, help='shared conditional unshared scale depth')
     
     parser.add_argument('--use-inv-scaling', default=False, action='store_true')
-    parser.add_argument('--r-domain-range', nargs='+', type=float, default=[0, 7190])
-    parser.add_argument('--t-domain-range', nargs='+', type=float, default=[0, 1226428])
+    parser.add_argument('--r-domain-range', nargs='+', type=float, default=[0, 7029])
+    parser.add_argument('--t-domain-range', nargs='+', type=float, default=[0, 1207472])
     parser.add_argument('--use-dequantisation', default=False, action='store_true')
     parser.add_argument('--vardeq-depth', type=int, default=0, help='Number of layers in variational dequantisation. If set to None, uniform dequantisation is used.')
     parser.add_argument('--r-quants', type=int, default=256, help='number of quantisation levels of the conditioning image (R in the paper)')

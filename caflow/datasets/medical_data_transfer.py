@@ -240,7 +240,16 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         mri_path, pet_path = read_paths[index][0], read_paths[index][1]
         mri_scan, pet_scan = read_scan(mri_path), read_scan(pet_path)
         mri_scan_shape, pet_scan_shape = mri_scan.shape, pet_scan.shape
+        
+        #Original shapes
+        print('Original shapes')
+        print('mri shape: ', mri_scan_shape)
+        print('pet shape: ', pet_scan_shape)
 
+        #Shapes After masking
+        mri_scan = mri_scan[:,:,20:35]
+        pet_scan = pet_scan[:,:,20:35]
+        print('Shapes after masking')
         print('mri shape: ', mri_scan_shape)
         print('pet shape: ', pet_scan_shape)
 
@@ -267,10 +276,10 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         #concat_pet_scans.append(pet_scan)
         
         #slice the relevant part of the brain using the mask provided by Soroosh.
-        resized_mri_scan = zoom(mri_scan[:,:,20:35], zoom = calculate_zoom(target_resolution, mri_scan_shape), order=0) #has a weird effect produces values out of range->use order=0
+        resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape), order=0) #has a weird effect produces values out of range->use order=0
         print('mri shape: ', resized_mri_scan.shape)
 
-        resized_pet_scan = zoom(pet_scan[:,:,20:35], zoom = calculate_zoom(target_resolution, pet_scan_shape), order=0)
+        resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape), order=0)
         print('pet shape: ', resized_pet_scan.shape)
 
         r_scan_min, r_scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
