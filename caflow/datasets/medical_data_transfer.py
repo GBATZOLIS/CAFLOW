@@ -209,7 +209,7 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
             if target_resolution[x] == -1:
                 zoom.append(1)
             else:
-                zoom.append(target_resolution[x]/mri_scan_shape[x])
+                zoom.append(target_resolution[x]/original_shape[x])
         return zoom
 
     def save_mri_pet_paired_scans(phase, mri_scan, pet_scan, mri_scan_name, pet_scan_name):
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     parser.add_argument('--inspect-time-threshold', type=int, default=90, help='Maximum difference between MRI and PET')
 
     #dataset creation settings
-    parser.add_argument('--target-resolution', nargs='+', type=int, default=[96,96,15])
+    parser.add_argument('--target-resolution', nargs='+', type=int, default=[96,96,-1])
     parser.add_argument('--time-threshold', default=35, type=int, help='Maximum time difference between acquisition of MRI and PET scans.')
     parser.add_argument('--split', nargs='+', type=float, default=[0.85, 0.1, 0.05], help='train-val-test split.')
 
