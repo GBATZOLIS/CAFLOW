@@ -265,11 +265,12 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         #    concat_mri_scans, concat_pet_scans = [], []
         #concat_mri_scans.append(mri_scan)
         #concat_pet_scans.append(pet_scan)
-
-        resized_mri_scan = zoom(mri_scan, zoom = calculate_zoom(target_resolution, mri_scan_shape), order=0) #has a weird effect produces values out of range->use order=0
+        
+        #slice the relevant part of the brain using the mask provided by Soroosh.
+        resized_mri_scan = zoom(mri_scan[:,:,20:35], zoom = calculate_zoom(target_resolution, mri_scan_shape), order=0) #has a weird effect produces values out of range->use order=0
         print('mri shape: ', resized_mri_scan.shape)
 
-        resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan_shape), order=0)
+        resized_pet_scan = zoom(pet_scan[:,:,20:35], zoom = calculate_zoom(target_resolution, pet_scan_shape), order=0)
         print('pet shape: ', resized_pet_scan.shape)
 
         r_scan_min, r_scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
@@ -330,7 +331,7 @@ if __name__ == '__main__':
     parser.add_argument('--inspect-time-threshold', type=int, default=90, help='Maximum difference between MRI and PET')
 
     #dataset creation settings
-    parser.add_argument('--target-resolution', nargs='+', type=int, default=[96,96,96])
+    parser.add_argument('--target-resolution', nargs='+', type=int, default=[96,96,15])
     parser.add_argument('--time-threshold', default=35, type=int, help='Maximum time difference between acquisition of MRI and PET scans.')
     parser.add_argument('--split', nargs='+', type=float, default=[0.85, 0.1, 0.05], help='train-val-test split.')
 

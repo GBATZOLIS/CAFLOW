@@ -73,7 +73,7 @@ class TemplateDataset(BaseDataset):
             elif self.file_extension in ['.npy']:
                 A = np.load(A_path)
                 B = np.load(B_path)
-
+                print(A.shape)
                 #reshape/slice appropriately
                 if self.channels == 1:
                     #slicing
@@ -87,6 +87,8 @@ class TemplateDataset(BaseDataset):
                         return starting_index
 
                     i0, i1, i2 = get_starting_index(A, self.resolution, 0), get_starting_index(A, self.resolution, 1), get_starting_index(A, self.resolution, 2)
+                    
+                    #i0, i1, i2 = 0, 0, 20
                     A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
                     B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
 
@@ -98,8 +100,8 @@ class TemplateDataset(BaseDataset):
                     #    B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
 
                     #dequantise 0 value
-                    A[A==0.]=10**(-6)*np.random.rand()
-                    B[B==0.]=10**(-6)*np.random.rand()
+                    #A[A==0.]=10**(-6)*np.random.rand()
+                    #B[B==0.]=10**(-6)*np.random.rand()
                     
                     #expand dimensions to acquire a pytorch-like form.
                     A = np.expand_dims(A, axis=0)
@@ -108,8 +110,9 @@ class TemplateDataset(BaseDataset):
                 elif self.channels > 1 and self.channels < A.shape[-1]:
                     starting_slicing_index = np.random.randint(0, A.shape[-1] - self.channels)
                     A = A[:,:,starting_slicing_index:starting_slicing_index+self.channels]
-                    A = np.moveaxis(A, -1, 0)
                     B = B[:,:,starting_slicing_index:starting_slicing_index+self.channels]
+
+                    A = np.moveaxis(A, -1, 0)
                     B = np.moveaxis(B, -1, 0)
 
                 elif self.channels == A.shape[-1]:
