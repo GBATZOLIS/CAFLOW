@@ -239,12 +239,16 @@ def main(hparams):
 
                 x, y = x.to(device), y.to(device)
                 selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                print(x.size())
+                print(y.size())
+                print(selected_samples.size())
 
                 if hparams.num_selected_samples == 1:
                     selected_samples = torch.squeeze(selected_samples, dim=1)
                     for j in range(selected_samples.size(0)):
                         save_image(selected_samples[j], os.path.join(images_dir, 'img_%d_%d.png'%(step, j)), normalize = True)
                     
+
                     mean_psnr = torch.mean(psnr(selected_samples.to(device)/255, y/255)).item()
                     mean_rmse = torch.mean(torch.sqrt(mse(selected_samples.to(device), y))).item()
                     mean_lpips = torch.mean(lpips(selected_samples.to(device)/255, y/255)).item()
