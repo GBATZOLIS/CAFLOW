@@ -245,9 +245,17 @@ def main(hparams):
                     for j in range(selected_samples.size(0)):
                         save_image(selected_samples[j], os.path.join(images_dir, 'img_%d_%d.png'%(step, j)), normalize = True)
                     
-                    average_psnr.append(torch.mean(psnr(selected_samples.to(device)/255, y/255)).item())
-                    average_rmse.append(torch.mean(torch.sqrt(mse(selected_samples.to(device), y))).item())
-                    average_lpips.append(torch.mean(lpips(selected_samples.to(device)/255, y/255)).item())
+                    mean_psnr = torch.mean(psnr(selected_samples.to(device)/255, y/255)).item()
+                    mean_rmse = torch.mean(torch.sqrt(mse(selected_samples.to(device), y))).item()
+                    mean_lpips = torch.mean(lpips(selected_samples.to(device)/255, y/255)).item()
+                    print('mean_psnr: ', mean_psnr)
+                    print('mean_rmse: ', mean_rmse)
+                    print('mean_lpips: '. mean_lpips)
+
+
+                    average_psnr.append(mean_psnr)
+                    average_rmse.append(mean_rmse)
+                    average_lpips.append(mean_lpips)
                     #average_lpips.append(torch.mean(lpips(x/255, y/255)).item()) #-> CALCULATE BASELINE
                 else:
                     #1.) calculate the standard deviation of the pixels
