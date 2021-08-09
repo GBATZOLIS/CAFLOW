@@ -250,7 +250,7 @@ def main(hparams):
                     mean_lpips = torch.mean(lpips(selected_samples.to(device)/255, y/255)).item()
                     print('mean_psnr: ', mean_psnr)
                     print('mean_rmse: ', mean_rmse)
-                    print('mean_lpips: '. mean_lpips)
+                    print('mean_lpips: ', mean_lpips)
 
 
                     average_psnr.append(mean_psnr)
