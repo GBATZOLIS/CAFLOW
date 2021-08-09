@@ -242,9 +242,12 @@ def main(hparams):
                 print(x.size())
                 print(y.size())
                 print(selected_samples.size())
+                
 
                 if hparams.num_selected_samples == 1:
                     selected_samples = torch.squeeze(selected_samples, dim=1)
+                    print(selected_samples.size())
+                    print(selected_samples[0,0,:10,:10])
                     for j in range(selected_samples.size(0)):
                         save_image(selected_samples[j], os.path.join(images_dir, 'img_%d_%d.png'%(step, j)), normalize = True)
                     
