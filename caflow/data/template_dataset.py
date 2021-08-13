@@ -86,11 +86,11 @@ class TemplateDataset(BaseDataset):
                             raise Exception('requested resolution exceeds data resolution in axis %d' % axis)
                         return starting_index
 
-                    i0, i1, i2 = get_starting_index(A, self.resolution, 0), get_starting_index(A, self.resolution, 1), get_starting_index(A, self.resolution, 2)
+                    #i0, i1, i2 = get_starting_index(A, self.resolution, 0), get_starting_index(A, self.resolution, 1), get_starting_index(A, self.resolution, 2)
                     
                     #i0, i1, i2 = 0, 0, 20
-                    A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
-                    B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    #A = A[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
+                    #B = B[i0:i0+self.resolution[0], i1:i1+self.resolution[1], i2:i2+self.resolution[2]]
 
                     #------rotation-------
                     #angle = [0, 90, 180, 270][np.random.randint(4)]
