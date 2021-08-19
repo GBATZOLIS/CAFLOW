@@ -285,12 +285,13 @@ class CAFlow(pl.LightningModule):
                 str_title = 'paired_video_epoch_%d_batch_%d_dim_%d' % (epoch, batch, dim)
                 self.logger.experiment.add_video(str_title, video_grid, self.current_epoch)
 
+            '''
             generate_paired_video(Y, I, 0, 1, self.current_epoch, batch_idx)
             generate_paired_video(Y, I, 0, 2, self.current_epoch, batch_idx)
             generate_paired_video(Y, I, 0, 3, self.current_epoch, batch_idx)
-
-
             '''
+
+            
             raw_length = 1 + self.num_val_samples + 1
             dim1cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]]))
             dim2cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]]))
@@ -329,7 +330,7 @@ class CAFlow(pl.LightningModule):
                 str_title = 'val_samples_epoch_%d_T_%.2f_cut_dim3' % (self.current_epoch, sampling_T)
                 self.logger.experiment.add_image(str_title, grid, self.current_epoch)
                 #--------------------------------------------------------------------------------------------
-            '''
+            
 
     def configure_optimizers(self,):
         class scheduler_lambda_function:
