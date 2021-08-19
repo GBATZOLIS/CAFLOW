@@ -29,10 +29,10 @@ def main(hparams):
     if hparams.pretrain in ['A', 'B']:
         train_dataset = TemplateDataset(hparams, phase='train', domain=hparams.pretrain)
         train_dataloader = DataLoader(train_dataset, batch_size=hparams.train_batch,
-                                      num_workers=hparams.train_workers)
+                                      num_workers=hparams.train_workers, shuffle=True)
         val_dataset = TemplateDataset(hparams, phase='val', domain=hparams.pretrain)
         val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
-                                    num_workers=hparams.val_workers)
+                                    num_workers=hparams.val_workers, shuffle=False)
         model = UFlow(hparams)
         callbacks = [EarlyStopping('val_loss', patience=100), LearningRateMonitor()]
         if hparams.use_ema: callbacks.extend([EMACallback()])
