@@ -100,8 +100,8 @@ class TemplateDataset(BaseDataset):
                     #    B = scipy.ndimage.rotate(B, angle=angle, axes=axes_combo)
 
                     #dequantise 0 value
-                    #A[A==0.]=10**(-6)*np.random.rand()
-                    #B[B==0.]=10**(-6)*np.random.rand()
+                    A[A==0.]=10**(-1)*np.random.rand()
+                    B[B==0.]=10**(-1)*np.random.rand()
                     
                     #expand dimensions to acquire a pytorch-like form.
                     A /= 7190
