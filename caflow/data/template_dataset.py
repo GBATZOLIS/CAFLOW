@@ -104,6 +104,8 @@ class TemplateDataset(BaseDataset):
                     #B[B==0.]=10**(-6)*np.random.rand()
                     
                     #expand dimensions to acquire a pytorch-like form.
+                    Α = Α/7190
+                    Β = Β/1226428
                     A = np.expand_dims(A, axis=0)
                     B = np.expand_dims(B, axis=0)
 
