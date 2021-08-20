@@ -155,7 +155,7 @@ class CAFlow(pl.LightningModule):
             loss = neg_avg_scaled_logjoint + self.lambda_rec * train_rec_loss
         else:
             #code for checking invertibility of the analytically invertible functions of the framework.
-            
+            '''
             def mean_abs(X:list, Y:list):
                 result = 0.
                 for x, y in zip(X,Y):
@@ -175,7 +175,7 @@ class CAFlow(pl.LightningModule):
                 self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            
+            '''
             loss = neg_avg_scaled_logjoint
         
         #logging
