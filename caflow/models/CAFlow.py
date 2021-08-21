@@ -155,7 +155,7 @@ class CAFlow(pl.LightningModule):
             loss = neg_avg_scaled_logjoint + self.lambda_rec * train_rec_loss
         else:
             #code for checking invertibility of the analytically invertible functions of the framework.
-            '''
+            
             def mean_abs(X:list, Y:list):
                 result = 0.
                 for x, y in zip(X,Y):
@@ -175,7 +175,7 @@ class CAFlow(pl.LightningModule):
                 self.log('r_flow_rec', torch.mean(torch.abs(Y-Y_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('t_flow_rec', torch.mean(torch.abs(I-I_dash)), on_step=True, on_epoch=True, prog_bar=True, logger=True)
                 self.log('cond_flow_rec', mean_abs(L, L_dash), on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            '''
+            
             loss = neg_avg_scaled_logjoint
         
         #logging
@@ -244,7 +244,7 @@ class CAFlow(pl.LightningModule):
                 str_title = 'val_samples_epoch_%d_T_%.2f_middlecut_dim3' % (self.current_epoch, sampling_T)
                 self.logger.experiment.add_image(str_title, grid, self.current_epoch)
 
-        elif self.dim == 3 and self.current_epoch % 20 == 5:
+        elif self.dim == 3 and self.current_epoch % 20 == 1:
             #Y, I shape: (batchsize, 1, x1, x2, x3) - (0, 1, 2, 3, 4)
             #We are going to display slices of the 3D reconstructed PET image. 
             #We will additionally save the synthetic and real images for further evaluation outside tensorboard.
