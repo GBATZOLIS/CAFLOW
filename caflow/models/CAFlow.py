@@ -266,11 +266,11 @@ class CAFlow(pl.LightningModule):
                 I=I.cpu()
                 for frame in range(frames):
                     if dim==1:
-                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]])).astype(Y)
+                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[3], I.shape[4]])).type_as(Y)
                     elif dim==2:
-                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]])).astype(Y)
+                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[4]])).type_as(Y)
                     elif dim==3:
-                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]])).astype(Y)
+                        dim_cut = torch.zeros(tuple([B*raw_length, 1, I.shape[2], I.shape[3]])).type_as(Y)
 
                     for i in range(B):
                         if dim==1:
