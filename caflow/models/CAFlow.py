@@ -301,9 +301,9 @@ class CAFlow(pl.LightningModule):
                 self.logger.experiment.add_video(str_title, video_grid, self.current_epoch)
 
             
-            generate_paired_video(Y, I, 0, 1, self.current_epoch, batch_idx)
-            generate_paired_video(Y, I, 0, 2, self.current_epoch, batch_idx)
-            generate_paired_video(Y, I, 0, 3, self.current_epoch, batch_idx)
+            generate_paired_video(Y, I, 1, 1, self.current_epoch, batch_idx)
+            generate_paired_video(Y, I, 1, 2, self.current_epoch, batch_idx)
+            generate_paired_video(Y, I, 1, 3, self.current_epoch, batch_idx)
             
 
             
