@@ -67,6 +67,7 @@ class g_S(nn.Module):
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, 
                                                 dims_c=dims_c, 
                                                 subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                 nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
@@ -80,6 +81,7 @@ class g_S(nn.Module):
             self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                      clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                       nn_settings=nn_settings))
 
         
@@ -163,6 +165,7 @@ class g_I(nn.Module):
             self.layers.append(ConditionalAffineTransform(dims_in=dims_in, 
                                                           dims_c=dims_c, 
                                                           subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                          clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                           nn_settings=nn_settings))
             
             #AFFINE COUPLING LAYER
@@ -176,6 +179,7 @@ class g_I(nn.Module):
             self.layers.append(AffineCouplingOneSided(dims_in=dims_in, 
                                                       dims_c=dims_c,
                                                       subnet_constructor=parse_nn_by_name(nn_settings['nn_type']),
+                                                      clamp=1, clamp_activation = (lambda u: 0.5*torch.sigmoid(u)+0.5),
                                                       nn_settings=nn_settings))
     
     def forward(self, h, D, logdet, reverse=False):
