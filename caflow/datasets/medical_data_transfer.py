@@ -281,26 +281,27 @@ def prepare_training_dataset(output_dir, read_paths, save_names, target_resoluti
         resized_pet_scan = zoom(pet_scan, zoom = calculate_zoom(target_resolution, pet_scan.shape), order=0)
         print('pet shape: ', resized_pet_scan.shape)
 
-        r_scan_min, r_scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
-        if r_scan_min < r_mri_min:
-            r_mri_min = r_scan_min
-        if r_scan_max > r_mri_max:
-            r_mri_max = r_scan_max
+        mri_scan_min, mri_scan_max = np.min(resized_mri_scan), np.max(resized_mri_scan)
+        if mri_scan_min < r_mri_min:
+            r_mri_min = mri_scan_min
+        if mri_scan_max > r_mri_max:
+            r_mri_max = mri_scan_max
         
-        r_scan_min, r_scan_max = np.min(resized_pet_scan), np.max(resized_pet_scan)
-        if r_scan_min < r_pet_min:
-            r_pet_min = r_scan_min
-        if r_scan_max > r_pet_max:
-            r_pet_max = r_scan_max
+        pet_scan_min, pet_scan_max = np.min(resized_pet_scan), np.max(resized_pet_scan)
+        if pet_scan_min < r_pet_min:
+            r_pet_min = pet_scan_min
+        if pet_scan_max > r_pet_max:
+            r_pet_max = pet_scan_max
 
         #save the scan in the right folder.
-        if i < int(split[0]*num_pairs):
-            save_mri_pet_paired_scans('train', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under train
-        elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
-            save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
-        else:
-            save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
-    
+        if pet_scan_max>1e3 and pet_scan_max<5e4:
+            if i < int(split[0]*num_pairs):
+                save_mri_pet_paired_scans('train', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under train
+            elif i >= int(split[0]*num_pairs) and i < int((split[0]+split[1])*num_pairs):
+                save_mri_pet_paired_scans('val', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under val
+            else:
+                save_mri_pet_paired_scans('test', resized_mri_scan, resized_pet_scan, save_names[index][0], save_names[index][1])#save under test
+        
     print('====== ORIGINAL RANGE ========')
     print('MRI RANGE: (%.8f, %.8f)' % (mri_min, mri_max))
     print('PET RANGE: (%.8f, %.8f)' % (pet_min, pet_max))
