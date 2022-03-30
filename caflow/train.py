@@ -24,7 +24,7 @@ import torch.optim as optim
 
 def main(hparams):
     if hparams.create_dataset:
-        create_dataset(master_path=hparams.dataroot, resize_size=hparams.load_size, \
+        create_dataset(master_path=hparams.dataroot, resize_size=hparams.resolution, \
                        dataset_size=hparams.max_dataset_size, dataset_style=hparams.dataset_style, mask_to_area=hparams.mask_to_area, sr_factor=hparams.sr_factor)
 
     if hparams.pretrain in ['A', 'B']:
