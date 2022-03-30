@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--use-ema', default=False, action='store_true', help='whether to use exponential moving average for the model parameters.')
     
     #model specific arguments
-    parser.add_argument('--conditioning_arch', default='CAFLOW', help='overall model architecture. Options=[DualGlow, CAFLOW].') #new addition to include the ablation study with dual-glow.
+    parser.add_argument('--conditioning_arch', default='CAFLOW', type=str, help='overall model architecture. Options=[DualGlow, CAFLOW].') #new addition to include the ablation study with dual-glow.
     parser.add_argument('--shared', default=False, action='store_true', help='Set shared to True if want to use shared conditional flow instead of normal conditional flow.')
     parser.add_argument('--train-shortcut', default=True, type=bool, help='Use the training shortcut if a shared conditional architecture is used.')
     parser.add_argument('--val-shortcut', default=True, type=bool, help='Same as the train-shorcut but for the validation loop.')
