@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from caflow.data.aligned_dataset import AlignedDataset
 from caflow.data.template_dataset import TemplateDataset
 from caflow.models.CAFlow import CAFlow
+from caflow.models.DualGlow import DualGlow
 from caflow.models.UFlow import UFlow
 from caflow.data.create_dataset import create_dataset
 from caflow.utils.EMACallback import EMACallback
@@ -52,13 +53,19 @@ def main(hparams):
         val_dataloader = DataLoader(val_dataset, batch_size=hparams.val_batch,
                                     num_workers=hparams.val_workers)
         
-        model = CAFlow(hparams)
+        if hparams.conditioning_arch == 'CAFLOW':
+            model = CAFlow(hparams)
+        elif hparams.conditioning_arch == 'DualGlow':
+            model = DualGlow(hparams)
+
         callbacks = [EarlyStopping('val_loss', patience=100), LearningRateMonitor()]
         if hparams.use_ema: callbacks.extend([EMACallback()])
+
         trainer = Trainer(num_nodes=hparams.num_nodes, gpus=hparams.gpus, accelerator=hparams.accelerator, \
                         accumulate_grad_batches=hparams.accumulate_grad_batches, \
                         resume_from_checkpoint=hparams.resume_from_checkpoint, max_steps=hparams.max_steps,
                         callbacks=callbacks)
+
         trainer.fit(model, train_dataloader, val_dataloader)
 
     elif hparams.pretrain == 'finetuning':
@@ -141,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--use-ema', default=False, action='store_true', help='whether to use exponential moving average for the model parameters.')
     
     #model specific arguments
+    parser.add_argument('--conditioning_arch', default='CAFLOW', help='overall model architecture. Options=[DualGlow, CAFLOW].') #new addition to include the ablation study with dual-glow.
     parser.add_argument('--shared', default=False, action='store_true', help='Set shared to True if want to use shared conditional flow instead of normal conditional flow.')
     parser.add_argument('--train-shortcut', default=True, type=bool, help='Use the training shortcut if a shared conditional architecture is used.')
     parser.add_argument('--val-shortcut', default=True, type=bool, help='Same as the train-shorcut but for the validation loop.')
