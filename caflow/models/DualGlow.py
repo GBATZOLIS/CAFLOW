@@ -197,5 +197,8 @@ class DualGlow(pl.LightningModule):
     def generate_z_cond(self, D, T=1):
         z=[]
         for i in range(len(D)):
-            z.append(T*self.prior.sample(sample_shape=D[i].shape).type_as(D[i]))
+            #conditional latents have the same shape as the target encodings L (but squeezed). 
+            #We assume here that D has the same shape as L. This won't be in general true, so it should be addressed in the future.
+            squeezed_shape = tuple([D[i].shape[0], D[i].shape[1]*2**(self.dim)]+[x//2 for x in D[i].shape[2:]])
+            z.append(T*self.prior.sample(sample_shape=squeezed_shape).type_as(D[i]))
         return z
