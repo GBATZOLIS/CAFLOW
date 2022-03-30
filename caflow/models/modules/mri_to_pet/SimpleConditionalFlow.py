@@ -62,6 +62,7 @@ class SimpleConditionalFlow(nn.Module):
             logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
             z.append(h_split)
         
+        print(z.size())
         return z, logprob, logdet
     
     def decode(self, z, D, logdet):
