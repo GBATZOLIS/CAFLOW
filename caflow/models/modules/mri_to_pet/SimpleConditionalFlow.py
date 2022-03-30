@@ -61,20 +61,11 @@ class SimpleConditionalFlow(nn.Module):
             h_split, logdet = self.scale_flows[i](L[i], D[i], logdet, reverse=False)
             logprob += self.prior.log_prob(h_split).sum(dim = [i+1 for i in range(self.dim+1)])
             z.append(h_split)
-        
-        print('-----encoded-----')
-        for elem in z:
-            print(elem.size())
 
         return z, logprob, logdet
     
     def decode(self, z, D, logdet):
         L = []
-        
-        print('-----decoded------')
-        for elem in z:
-            print(elem.size())
-
         for i in range(self.scales):
             h_pass, logdet = self.scale_flows[i](z[i], D[i], logdet, reverse=True)
             L.append(h_pass)
