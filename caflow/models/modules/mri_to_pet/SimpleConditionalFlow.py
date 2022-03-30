@@ -67,6 +67,7 @@ class SimpleConditionalFlow(nn.Module):
     def decode(self, z, D, logdet):
         L = []
         for i in range(self.scales):
+            print(z[i].size(), D[i].size())
             h_pass, logdet = self.scale_flows[i](z[i], D[i], logdet, reverse=True)
             L.append(h_pass)
         return L, logdet
