@@ -277,12 +277,12 @@ def main(hparams):
 
     base_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
 
-    if hparams.conditioning_arch == 'CAFLOW':
-        model = CAFlow(hparams)
-    elif hparams.conditioning_arch == 'DualGlow':
-        model = DualGlow(hparams)
+    #if hparams.conditioning_arch == 'CAFLOW':
+    #    model = CAFlow(hparams)
+    #elif hparams.conditioning_arch == 'DualGlow':
+    #    model = DualGlow(hparams)
 
-    model = model.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(base_dir, 'checkpoints', '*.ckpt'))[-1]).to(device)
+    model = DualGlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(base_dir, 'checkpoints', '*.ckpt'))[-1]).to(device)
     model.eval()
 
     writer_dir = os.path.join(base_dir, 'testing')
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, default=None)
 
     parser.add_argument('--conditioning_arch', default='CAFLOW', type=str, help='overall model architecture. Options=[DualGlow, CAFLOW].') #new addition to include the ablation study with dual-glow.
-    
+
     #program arguments
     parser.add_argument('--dataroot', default='caflow/datasets/ffhq', help='path to images')
     parser.add_argument('--val-batch', type=int, default=20, help='val batch size')
