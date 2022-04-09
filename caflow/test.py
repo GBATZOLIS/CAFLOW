@@ -199,7 +199,9 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
     #Calculate the conditional log probabilities of the ground truth images
     D, _, _ = model.model['rflow'](y=Y)
     L, _, tlogdet = model.model['tflow'](y=I)
-    Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    #Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    Z_cond, condlogprior, condlogdet = model.model['ConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    
     cond_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
     for i in range(B):
         cond_log_probs[(i+1)*raw_length-1] = cond_log_prob[i]
