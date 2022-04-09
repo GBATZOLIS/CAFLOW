@@ -15,6 +15,7 @@ from pathlib import Path
 from piqa.psnr import psnr, mse
 from piqa.lpips import LPIPS
 from torchvision.utils import save_image
+from caflow.models.DualGlow import DualGlow
 
 def annealed_distribution_uflow(hparams):
     device = torch.device('cuda:%s' % hparams.gpu) if hparams.gpu is not None else torch.device('cpu')
@@ -276,7 +277,12 @@ def main(hparams):
 
     base_dir = os.path.join('lightning_logs','version_%d' % hparams.experiment)
 
-    model = CAFlow.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(base_dir, 'checkpoints', '*.ckpt'))[-1]).to(device)
+    if hparams.conditioning_arch == 'CAFLOW':
+        model = CAFlow(hparams)
+    elif hparams.conditioning_arch == 'DualGlow':
+        model = DualGlow(hparams)
+
+    model = model.load_from_checkpoint(checkpoint_path=glob.glob(os.path.join(base_dir, 'checkpoints', '*.ckpt'))[-1]).to(device)
     model.eval()
 
     writer_dir = os.path.join(base_dir, 'testing')
@@ -297,10 +303,10 @@ def main(hparams):
             for step, (x,y) in tqdm(enumerate(val_dataloader)):
 
                 x, y = x.to(device), y.to(device)
-                draw_3D_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
-                #selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                #draw_3D_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
+                selected_samples = draw_samples(writer, model, x, y, hparams.num_samples, temperature_list, step, hparams.plot, hparams.num_selected_samples)
 
-                '''
+                
                 if hparams.num_selected_samples == 1:
                     selected_samples = torch.squeeze(selected_samples, dim=1)
                     for j in range(selected_samples.size(0)):
@@ -323,14 +329,14 @@ def main(hparams):
                     for j in range(selected_samples.size(0)):
                         for i in range(selected_samples.size(1)):
                             save_image(selected_samples[j][i], os.path.join(images_dir, 'img_%d_%d_%d.png'%(step, j, i)), normalize = True)
-                '''
+                
 
-    '''     
+       
     print('Average PSNR: %.2f' % np.mean(average_psnr))
     print('Average RMSE: %.2f' % np.mean(average_rmse))
     print('Average LPIPS: %.2f' % np.mean(average_lpips))
     print('Average pixel std: %.3f' % np.mean(average_pixel_stds))
-    '''
+    
     writer.close()
 
 if __name__ == '__main__':
