@@ -73,7 +73,8 @@ def pertub_all_but_last_scale(z_cond_unshared, std):
 def conditional_log_prob(Y, I, model):
     D, _, _ = model.model['rflow'](y=Y)
     L, _, tlogdet = model.model['tflow'](y=I)
-    Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    #Z_cond, condlogprior, condlogdet = model.model['UnsharedConditionalFlow'](L=L, z=[], D=D, reverse=False)
+    Z_cond, condlogprior, condlogdet = model.model['ConditionalFlow'](L=L, z=[], D=D, reverse=False)
     cond_log_prob = (tlogdet + condlogprior + condlogdet).detach().cpu()
     return cond_log_prob
 
