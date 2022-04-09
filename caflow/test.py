@@ -210,7 +210,7 @@ def draw_samples(writer, model, Y, I, num_samples, temperature_list, batch_ID, p
     for j in tqdm(range(1, num_samples+1)):
         #decoding
         #sampled_image = model.sample(Y, shortcut=model.val_shortcut, temperature_list=temperature_list)
-        sampled_image = model.sample(Y, temperature_list=temperature_list[0])
+        sampled_image = model.sample(Y, T=temperature_list[0])
         
         #encoding
         cond_log_prob = conditional_log_prob(Y, sampled_image, model)
